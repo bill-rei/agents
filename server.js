@@ -1,15 +1,19 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const multer = require('multer');
+const parseDoc = require('./lib/parse-doc');
 const { compile } = require('./lib/llm');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.post('/api/compile', async (req, res) => {
+app.post('/api/compile', upload.array('files'), async (req, res) => {
   try {
     const {
       campaignTitle,
@@ -21,6 +25,22 @@ app.post('/api/compile', async (req, res) => {
       referenceDocs,
     } = req.body;
 
+    let refText = referenceDocs || '';
+
+    if (req.files && req.files.length) {
+      const parsed = [];
+      for (const f of req.files) {
+        try {
+          const text = await parseDoc(f.buffer, f.mimetype, f.originalname);
+          parsed.push(`\n\n[File: ${f.originalname}]\n${text}`);
+        } catch (err) {
+          console.error('Failed to parse file', f.originalname, err);
+          parsed.push(`\n\n[File: ${f.originalname}] (unreadable: ${err.message})`);
+        }
+      }
+      refText = (refText ? refText + '\n' : '') + parsed.join('\n');
+    }
+
     const parts = [
       `Campaign Title: ${campaignTitle || 'TBD'}`,
       `Campaign Theme: ${campaignTheme || 'TBD'}`,
@@ -30,8 +50,8 @@ app.post('/api/compile', async (req, res) => {
       `Notes / Constraints: ${notes || 'None'}`,
     ];
 
-    if (referenceDocs) {
-      parts.push(`\nReference Documents:\n${referenceDocs}`);
+    if (refText) {
+      parts.push(`\nReference Documents:\n${refText}`);
     }
 
     const userMessage = parts.join('\n');

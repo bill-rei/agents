@@ -9,6 +9,8 @@ let rawOutput = '';
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
+  const filesInput = document.getElementById('referenceFiles');
+
   const body = {
     campaignTitle: form.campaignTitle.value.trim(),
     campaignTheme: form.campaignTheme.value.trim(),
@@ -25,14 +27,28 @@ form.addEventListener('submit', async (e) => {
   outputEl.className = 'output-content loading';
   outputEl.textContent = 'Compiling campaign draft. This may take a minute...';
 
-  try {
-    const res = await fetch('/api/compile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    try {
+      let res;
 
-    const data = await res.json();
+      // If files were chosen, submit as multipart/form-data
+      if (filesInput && filesInput.files && filesInput.files.length) {
+        const fd = new FormData();
+        Object.keys(body).forEach((k) => { if (body[k]) fd.append(k, body[k]); });
+        for (const f of filesInput.files) fd.append('files', f, f.name);
+
+        res = await fetch('/api/compile', {
+          method: 'POST',
+          body: fd,
+        });
+      } else {
+        res = await fetch('/api/compile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      }
+
+      const data = await res.json();
 
     if (!res.ok) {
       throw new Error(data.error || 'Request failed');

@@ -3,52 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Site Auditor</title>
+  <title>Marketing Site Auditor</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Site Auditor</h1>
-      <p class="subtitle">Analyze websites for SEO, accessibility, and content quality</p>
+      <h1>Marketing Site Auditor</h1>
+      <p class="subtitle">Audit website content for clarity, messaging, and credibility</p>
     </header>
 
-    <form id="campaign-form">
+    <form id="auditor-form">
       <div class="form-group">
-        <label for="campaignTitle">Campaign Title</label>
-        <input type="text" id="campaignTitle" name="campaignTitle" placeholder="e.g., Q1 Privacy-First Launch">
+        <label for="pageUrl">Page URL (optional)</label>
+        <input type="text" id="pageUrl" name="pageUrl" placeholder="e.g., https://example.com/landing-page">
       </div>
 
       <div class="form-group">
-        <label for="campaignTheme">Campaign Theme</label>
-        <input type="text" id="campaignTheme" name="campaignTheme" placeholder="e.g., Data Ownership">
+        <label for="pageContent">Page Content to Audit</label>
+        <textarea id="pageContent" name="pageContent" rows="12" placeholder="Paste the page content here (HTML, markdown, or plain text)"></textarea>
       </div>
 
       <div class="form-group">
-        <label for="primaryPersona">Primary Persona</label>
-        <input type="text" id="primaryPersona" name="primaryPersona" placeholder="e.g., Health-conscious founder, 30-45">
+        <label for="gtmContext">GTM Context / Positioning (optional)</label>
+        <textarea id="gtmContext" name="gtmContext" rows="3" placeholder="e.g., Privacy-first health data platform for founders. Key themes: data ownership, user control, non-extractive."></textarea>
       </div>
 
       <div class="form-group">
-        <label for="useCase">Use Case or Feature</label>
-        <input type="text" id="useCase" name="useCase" placeholder="e.g., Wearable data export + personal dashboard">
-      </div>
-
-      <div class="form-group">
-        <label for="releaseContext">Release Context</label>
-        <textarea id="releaseContext" name="releaseContext" rows="3" placeholder="e.g., Beta launch, iOS only, invite-only access"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="notes">Notes / Constraints</label>
-        <textarea id="notes" name="notes" rows="3" placeholder="e.g., No performance claims, emphasize privacy"></textarea>
+        <label for="notes">Human Notes (optional)</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="e.g., This page feels off. Hero section might be too vague. Privacy section needs review."></textarea>
       </div>
 
       <details class="reference-section">
-        <summary>Reference Documents (optional)</summary>
+        <summary>Reference Documents (Product Manual, GTM, etc.)</summary>
         <div class="form-group">
-          <label for="referenceDocs">Paste GTM, Product Manual, or other reference text</label>
-          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste reference documents here..."></textarea>
+          <label for="referenceDocs">Paste reference text</label>
+          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste Product Manual, GTM docs, or other reference material for the auditor to evaluate against..."></textarea>
         </div>
         <div class="form-group">
           <label for="referenceFiles">Or upload reference files (PDF, DOCX, TXT)</label>
@@ -56,12 +46,12 @@
         </div>
       </details>
 
-      <button type="submit" id="submit-btn">Compile Campaign</button>
+      <button type="submit" id="submit-btn">Run Audit</button>
     </form>
 
     <div id="output-section" class="hidden">
       <div class="output-header">
-        <h2>Compiled Output</h2>
+        <h2>Audit Results</h2>
         <button id="copy-btn" type="button">Copy</button>
       </div>
       <div id="output" class="output-content"></div>

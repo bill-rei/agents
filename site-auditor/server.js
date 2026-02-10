@@ -7,7 +7,7 @@ const { compile } = require('../lib/llm');
 const SYSTEM_PROMPT = require('./system-prompt');
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.SITE_AUDITOR_PORT || 3002;
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -17,11 +17,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/api/compile', upload.array('files'), async (req, res) => {
   try {
     const {
-      campaignTitle,
-      campaignTheme,
-      primaryPersona,
-      useCase,
-      releaseContext,
+      pageContent,
+      pageUrl,
+      gtmContext,
       notes,
       referenceDocs,
     } = req.body;
@@ -42,17 +40,30 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
       refText = (refText ? refText + '\n' : '') + parsed.join('\n');
     }
 
-    const parts = [
-      `Campaign Title: ${campaignTitle || 'TBD'}`,
-      `Campaign Theme: ${campaignTheme || 'TBD'}`,
-      `Primary Persona: ${primaryPersona || 'TBD'}`,
-      `Use Case or Feature: ${useCase || 'TBD'}`,
-      `Release Context: ${releaseContext || 'TBD'}`,
-      `Notes / Constraints: ${notes || 'None'}`,
-    ];
+    const parts = [];
+
+    if (pageUrl) {
+      parts.push(`Page URL: ${pageUrl}`);
+    }
+
+    if (pageContent) {
+      parts.push(`Page Content to Audit:\n${pageContent}`);
+    }
+
+    if (!pageContent && !pageUrl && !refText) {
+      parts.push('[No page content provided. Please paste page content, provide a URL, or upload files to audit.]');
+    }
+
+    if (gtmContext) {
+      parts.push(`\nGTM Context / Positioning:\n${gtmContext}`);
+    }
+
+    if (notes) {
+      parts.push(`\nHuman Notes:\n${notes}`);
+    }
 
     if (refText) {
-      parts.push(`\nReference Documents:\n${refText}`);
+      parts.push(`\nReference Documents (Product Manual, GTM, etc.):\n${refText}`);
     }
 
     const userMessage = parts.join('\n');
@@ -60,11 +71,11 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
 
     res.json({ result });
   } catch (err) {
-    console.error('Compile error:', err);
-    res.status(500).json({ error: err.message || 'Compilation failed' });
+    console.error('Site Auditor error:', err);
+    res.status(500).json({ error: err.message || 'Audit failed' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Site Auditor running on http://localhost:${PORT}`);
+  console.log(`Marketing Site Auditor running on http://localhost:${PORT}`);
 });

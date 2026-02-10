@@ -3,52 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Optimizer</title>
+  <title>Marketing Optimizer</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Optimizer</h1>
-      <p class="subtitle">Analyze performance data and optimize campaigns</p>
+      <h1>Marketing Optimizer</h1>
+      <p class="subtitle">Analyze post-distribution signals and generate upstream learnings</p>
     </header>
 
-    <form id="campaign-form">
+    <form id="optimizer-form">
       <div class="form-group">
-        <label for="campaignTitle">Campaign Title</label>
-        <input type="text" id="campaignTitle" name="campaignTitle" placeholder="e.g., Q1 Privacy-First Launch">
+        <label for="campaignMeta">Campaign Metadata</label>
+        <textarea id="campaignMeta" name="campaignMeta" rows="3" placeholder="e.g., Title: Q1 Data Ownership Launch | Theme: Privacy-First | Persona: Health-conscious founder, 30-45"></textarea>
       </div>
 
       <div class="form-group">
-        <label for="campaignTheme">Campaign Theme</label>
-        <input type="text" id="campaignTheme" name="campaignTheme" placeholder="e.g., Data Ownership">
+        <label for="platformMetrics">Platform Performance Metrics</label>
+        <textarea id="platformMetrics" name="platformMetrics" rows="6" placeholder="e.g., LinkedIn: 1,200 impressions, 45 clicks, 12 comments, 8 saves&#10;X (LLIF): 800 impressions, 22 clicks, 3 retweets&#10;Reddit: 340 views, 15 upvotes, 7 comments"></textarea>
       </div>
 
       <div class="form-group">
-        <label for="primaryPersona">Primary Persona</label>
-        <input type="text" id="primaryPersona" name="primaryPersona" placeholder="e.g., Health-conscious founder, 30-45">
+        <label for="qualitativeFeedback">Qualitative Feedback (optional)</label>
+        <textarea id="qualitativeFeedback" name="qualitativeFeedback" rows="4" placeholder="e.g., Comments asked about pricing. Two DMs requesting API access. Reddit thread turned into a discussion about data portability."></textarea>
       </div>
 
       <div class="form-group">
-        <label for="useCase">Use Case or Feature</label>
-        <input type="text" id="useCase" name="useCase" placeholder="e.g., Wearable data export + personal dashboard">
-      </div>
-
-      <div class="form-group">
-        <label for="releaseContext">Release Context</label>
-        <textarea id="releaseContext" name="releaseContext" rows="3" placeholder="e.g., Beta launch, iOS only, invite-only access"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="notes">Notes / Constraints</label>
-        <textarea id="notes" name="notes" rows="3" placeholder="e.g., No performance claims, emphasize privacy"></textarea>
+        <label for="humanNotes">Human Notes (optional)</label>
+        <textarea id="humanNotes" name="humanNotes" rows="3" placeholder="e.g., Blog felt too long. LinkedIn post got good engagement but Reddit felt flat. Consider shorter format next time."></textarea>
       </div>
 
       <details class="reference-section">
-        <summary>Reference Documents (optional)</summary>
+        <summary>Reference Documents (distributed assets, campaign brief, etc.)</summary>
         <div class="form-group">
-          <label for="referenceDocs">Paste GTM, Product Manual, or other reference text</label>
-          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste reference documents here..."></textarea>
+          <label for="referenceDocs">Paste reference text</label>
+          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste the distributed assets, campaign brief, or other context for the optimizer to reference..."></textarea>
         </div>
         <div class="form-group">
           <label for="referenceFiles">Or upload reference files (PDF, DOCX, TXT)</label>
@@ -56,12 +46,12 @@
         </div>
       </details>
 
-      <button type="submit" id="submit-btn">Compile Campaign</button>
+      <button type="submit" id="submit-btn">Analyze Performance</button>
     </form>
 
     <div id="output-section" class="hidden">
       <div class="output-header">
-        <h2>Compiled Output</h2>
+        <h2>Optimization Analysis</h2>
         <button id="copy-btn" type="button">Copy</button>
       </div>
       <div id="output" class="output-content"></div>

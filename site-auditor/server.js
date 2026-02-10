@@ -2,6 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
+const cheerio = require('cheerio');
 const parseDoc = require('../lib/parse-doc');
 const { compile } = require('../lib/llm');
 const SYSTEM_PROMPT = require('./system-prompt');
@@ -13,6 +14,78 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+async function crawlPage(url) {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'MarketingSiteAuditor/1.0' },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+  }
+
+  const html = await res.text();
+  const $ = cheerio.load(html);
+
+  // Remove non-content elements
+  $('script, style, noscript, iframe, svg, nav, footer').remove();
+
+  const extracted = [];
+
+  // Page title and meta
+  const title = $('title').text().trim();
+  const metaDesc = $('meta[name="description"]').attr('content') || '';
+  const ogTitle = $('meta[property="og:title"]').attr('content') || '';
+  const ogDesc = $('meta[property="og:description"]').attr('content') || '';
+
+  extracted.push(`[Page Title] ${title}`);
+  if (metaDesc) extracted.push(`[Meta Description] ${metaDesc}`);
+  if (ogTitle) extracted.push(`[OG Title] ${ogTitle}`);
+  if (ogDesc) extracted.push(`[OG Description] ${ogDesc}`);
+  extracted.push('');
+
+  // Walk headings and body content in document order
+  $('h1, h2, h3, h4, p, li, blockquote, figcaption').each(function () {
+    const tag = $(this).prop('tagName').toLowerCase();
+    const text = $(this).text().replace(/\s+/g, ' ').trim();
+    if (!text) return;
+
+    if (tag.startsWith('h')) {
+      extracted.push(`[${tag.toUpperCase()}] ${text}`);
+    } else if (tag === 'li') {
+      extracted.push(`  - ${text}`);
+    } else if (tag === 'blockquote') {
+      extracted.push(`  > ${text}`);
+    } else {
+      extracted.push(text);
+    }
+  });
+
+  // Extract CTAs (buttons and prominent links)
+  const ctas = [];
+  $('a[class*="cta"], a[class*="btn"], a[class*="button"], button').each(function () {
+    const text = $(this).text().replace(/\s+/g, ' ').trim();
+    const href = $(this).attr('href') || '';
+    if (text && text.length < 100) {
+      ctas.push(`"${text}"${href ? ' -> ' + href : ''}`);
+    }
+  });
+
+  if (ctas.length) {
+    extracted.push('');
+    extracted.push('[CTAs / Buttons]');
+    ctas.forEach((c) => extracted.push(`  - ${c}`));
+  }
+
+  // Truncate to avoid exceeding LLM context
+  const content = extracted.join('\n');
+  const maxChars = 30000;
+  if (content.length > maxChars) {
+    return content.slice(0, maxChars) + '\n\n[Content truncated at ' + maxChars + ' characters]';
+  }
+  return content;
+}
 
 app.post('/api/compile', upload.array('files'), async (req, res) => {
   try {
@@ -40,6 +113,17 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
       refText = (refText ? refText + '\n' : '') + parsed.join('\n');
     }
 
+    // Crawl live page if URL provided and no manual content pasted
+    let crawledContent = '';
+    if (pageUrl && !pageContent) {
+      try {
+        crawledContent = await crawlPage(pageUrl);
+      } catch (err) {
+        console.error('Crawl failed:', err.message);
+        crawledContent = `[Crawl failed for ${pageUrl}: ${err.message}. Paste page content manually.]`;
+      }
+    }
+
     const parts = [];
 
     if (pageUrl) {
@@ -48,9 +132,11 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
 
     if (pageContent) {
       parts.push(`Page Content to Audit:\n${pageContent}`);
+    } else if (crawledContent) {
+      parts.push(`Crawled Page Content:\n${crawledContent}`);
     }
 
-    if (!pageContent && !pageUrl && !refText) {
+    if (!pageContent && !crawledContent && !pageUrl && !refText) {
       parts.push('[No page content provided. Please paste page content, provide a URL, or upload files to audit.]');
     }
 

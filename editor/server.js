@@ -7,7 +7,7 @@ const { compile } = require('../lib/llm');
 const SYSTEM_PROMPT = require('./system-prompt');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.EDITOR_PORT || 3001;
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 

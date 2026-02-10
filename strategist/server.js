@@ -7,7 +7,7 @@ const { compile } = require('../lib/llm');
 const SYSTEM_PROMPT = require('./system-prompt');
 
 const app = express();
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.STRATEGIST_PORT || 3003;
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -17,12 +17,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/api/compile', upload.array('files'), async (req, res) => {
   try {
     const {
-      campaignTitle,
-      campaignTheme,
-      primaryPersona,
-      useCase,
+      gtmPriorities,
       releaseContext,
-      notes,
+      campaignBacklog,
+      auditSummary,
+      constraints,
       referenceDocs,
     } = req.body;
 
@@ -42,29 +41,46 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
       refText = (refText ? refText + '\n' : '') + parsed.join('\n');
     }
 
-    const parts = [
-      `Campaign Title: ${campaignTitle || 'TBD'}`,
-      `Campaign Theme: ${campaignTheme || 'TBD'}`,
-      `Primary Persona: ${primaryPersona || 'TBD'}`,
-      `Use Case or Feature: ${useCase || 'TBD'}`,
-      `Release Context: ${releaseContext || 'TBD'}`,
-      `Notes / Constraints: ${notes || 'None'}`,
-    ];
+    const parts = [];
 
-    if (refText) {
-      parts.push(`\nReference Documents:\n${refText}`);
+    if (gtmPriorities) {
+      parts.push(`GTM Priorities / Themes:\n${gtmPriorities}`);
     }
 
-    const userMessage = parts.join('\n');
+    if (releaseContext) {
+      parts.push(`Product Release Context:\n${releaseContext}`);
+    }
+
+    if (campaignBacklog) {
+      parts.push(`Campaign Backlog / Cadence:\n${campaignBacklog}`);
+    }
+
+    if (auditSummary) {
+      parts.push(`Audit / Performance Summary:\n${auditSummary}`);
+    }
+
+    if (constraints) {
+      parts.push(`Constraints (timing, audience, no-go topics):\n${constraints}`);
+    }
+
+    if (refText) {
+      parts.push(`Reference Documents:\n${refText}`);
+    }
+
+    if (parts.length === 0) {
+      parts.push('[No inputs provided. Please provide GTM priorities, release context, or other strategic inputs.]');
+    }
+
+    const userMessage = parts.join('\n\n');
     const result = await compile(userMessage, SYSTEM_PROMPT);
 
     res.json({ result });
   } catch (err) {
-    console.error('Compile error:', err);
-    res.status(500).json({ error: err.message || 'Compilation failed' });
+    console.error('Strategist error:', err);
+    res.status(500).json({ error: err.message || 'Strategy generation failed' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Strategist running on http://localhost:${PORT}`);
+  console.log(`Marketing Strategist running on http://localhost:${PORT}`);
 });

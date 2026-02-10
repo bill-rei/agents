@@ -3,52 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Strategist</title>
+  <title>Marketing Strategist</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Strategist</h1>
-      <p class="subtitle">Develop marketing strategies and campaign plans</p>
+      <h1>Marketing Strategist</h1>
+      <p class="subtitle">Decide what campaign to run next and why</p>
     </header>
 
-    <form id="campaign-form">
+    <form id="strategist-form">
       <div class="form-group">
-        <label for="campaignTitle">Campaign Title</label>
-        <input type="text" id="campaignTitle" name="campaignTitle" placeholder="e.g., Q1 Privacy-First Launch">
+        <label for="gtmPriorities">GTM Priorities / Themes</label>
+        <textarea id="gtmPriorities" name="gtmPriorities" rows="4" placeholder="e.g., Q1 focus on data ownership, privacy-first positioning, health-conscious founders"></textarea>
       </div>
 
       <div class="form-group">
-        <label for="campaignTheme">Campaign Theme</label>
-        <input type="text" id="campaignTheme" name="campaignTheme" placeholder="e.g., Data Ownership">
+        <label for="releaseContext">Product Release Context</label>
+        <textarea id="releaseContext" name="releaseContext" rows="4" placeholder="e.g., Wearable export v2 shipping next week, iOS only, invite-only beta"></textarea>
       </div>
 
       <div class="form-group">
-        <label for="primaryPersona">Primary Persona</label>
-        <input type="text" id="primaryPersona" name="primaryPersona" placeholder="e.g., Health-conscious founder, 30-45">
+        <label for="campaignBacklog">Campaign Backlog / Cadence (optional)</label>
+        <textarea id="campaignBacklog" name="campaignBacklog" rows="3" placeholder="e.g., Last campaign was Feature Launch (Jan 15). Due for a Thematic/POV campaign."></textarea>
       </div>
 
       <div class="form-group">
-        <label for="useCase">Use Case or Feature</label>
-        <input type="text" id="useCase" name="useCase" placeholder="e.g., Wearable data export + personal dashboard">
+        <label for="auditSummary">Audit / Performance Summary (optional)</label>
+        <textarea id="auditSummary" name="auditSummary" rows="3" placeholder="e.g., Site audit found weak privacy messaging on landing page. Blog traffic up 20%."></textarea>
       </div>
 
       <div class="form-group">
-        <label for="releaseContext">Release Context</label>
-        <textarea id="releaseContext" name="releaseContext" rows="3" placeholder="e.g., Beta launch, iOS only, invite-only access"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="notes">Notes / Constraints</label>
-        <textarea id="notes" name="notes" rows="3" placeholder="e.g., No performance claims, emphasize privacy"></textarea>
+        <label for="constraints">Constraints (optional)</label>
+        <textarea id="constraints" name="constraints" rows="3" placeholder="e.g., No medical claims, avoid competitor comparisons, launch must align with Feb event"></textarea>
       </div>
 
       <details class="reference-section">
-        <summary>Reference Documents (optional)</summary>
+        <summary>Reference Documents (GTM plans, roadmap, etc.)</summary>
         <div class="form-group">
-          <label for="referenceDocs">Paste GTM, Product Manual, or other reference text</label>
-          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste reference documents here..."></textarea>
+          <label for="referenceDocs">Paste reference text</label>
+          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste GTM planning docs, product roadmap, or other strategic references..."></textarea>
         </div>
         <div class="form-group">
           <label for="referenceFiles">Or upload reference files (PDF, DOCX, TXT)</label>
@@ -56,12 +51,12 @@
         </div>
       </details>
 
-      <button type="submit" id="submit-btn">Compile Campaign</button>
+      <button type="submit" id="submit-btn">Generate Strategy</button>
     </form>
 
     <div id="output-section" class="hidden">
       <div class="output-header">
-        <h2>Compiled Output</h2>
+        <h2>Strategic Output</h2>
         <button id="copy-btn" type="button">Copy</button>
       </div>
       <div id="output" class="output-content"></div>

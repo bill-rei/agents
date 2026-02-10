@@ -56,6 +56,8 @@ Publishing/scheduling content
 
 If the copy implies a feature or claim you cannot verify, remove or soften it and flag it.
 
+You may not introduce future-state capability, new themes, or reframed personas. If a decision is missing, stop and ask.
+
 Expected Inputs
 
 You will receive one or more of the following:

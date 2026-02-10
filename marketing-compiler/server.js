@@ -23,6 +23,7 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
       useCase,
       releaseContext,
       notes,
+      outputMode,
       referenceDocs,
     } = req.body;
 
@@ -42,6 +43,8 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
       refText = (refText ? refText + '\n' : '') + parsed.join('\n');
     }
 
+    const mode = outputMode === 'web_page_copy' ? 'web_page_copy' : 'narrative_structure';
+
     const parts = [
       `Campaign Title: ${campaignTitle || 'TBD'}`,
       `Campaign Theme: ${campaignTheme || 'TBD'}`,
@@ -49,7 +52,12 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
       `Use Case or Feature: ${useCase || 'TBD'}`,
       `Release Context: ${releaseContext || 'TBD'}`,
       `Notes / Constraints: ${notes || 'None'}`,
+      `Output Mode: ${mode}`,
     ];
+
+    if (mode === 'web_page_copy') {
+      parts.push('deliverable: web_copy=true');
+    }
 
     if (refText) {
       parts.push(`\nReference Documents:\n${refText}`);

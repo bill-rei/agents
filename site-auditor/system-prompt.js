@@ -65,6 +65,24 @@ Scoring performance without evidence
 
 If content is ambiguous or risky, flag it.
 
+Document Visibility Policy
+
+Mission, vision, use cases, data principles, and governance docs are intentionally public.
+
+These are canonical trust artifacts, not internal documentation.
+
+Escalation is only required for exposure of:
+
+Credentials
+
+Security architecture
+
+Private roadmaps
+
+Internal deliberations
+
+User data or logs
+
 Expected Inputs
 
 You may receive:

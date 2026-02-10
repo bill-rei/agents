@@ -3,52 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Distributor</title>
+  <title>Marketing Distributor</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Distributor</h1>
-      <p class="subtitle">Plan and organize content distribution across channels</p>
+      <h1>Marketing Distributor</h1>
+      <p class="subtitle">Package edited assets into platform-ready payloads</p>
     </header>
 
-    <form id="campaign-form">
+    <form id="distributor-form">
       <div class="form-group">
-        <label for="campaignTitle">Campaign Title</label>
-        <input type="text" id="campaignTitle" name="campaignTitle" placeholder="e.g., Q1 Privacy-First Launch">
+        <label for="editedAssets">Edited Campaign Assets</label>
+        <textarea id="editedAssets" name="editedAssets" rows="12" placeholder="Paste edited campaign output here (blog, Q&A, social copy, visual briefs, etc.)" required></textarea>
       </div>
 
       <div class="form-group">
-        <label for="campaignTheme">Campaign Theme</label>
-        <input type="text" id="campaignTheme" name="campaignTheme" placeholder="e.g., Data Ownership">
+        <label for="channels">Target Channels (optional)</label>
+        <textarea id="channels" name="channels" rows="3" placeholder="e.g., LinkedIn, X (LLIF + Best Life), Reddit. Leave blank to use SOP defaults."></textarea>
       </div>
 
       <div class="form-group">
-        <label for="primaryPersona">Primary Persona</label>
-        <input type="text" id="primaryPersona" name="primaryPersona" placeholder="e.g., Health-conscious founder, 30-45">
-      </div>
-
-      <div class="form-group">
-        <label for="useCase">Use Case or Feature</label>
-        <input type="text" id="useCase" name="useCase" placeholder="e.g., Wearable data export + personal dashboard">
-      </div>
-
-      <div class="form-group">
-        <label for="releaseContext">Release Context</label>
-        <textarea id="releaseContext" name="releaseContext" rows="3" placeholder="e.g., Beta launch, iOS only, invite-only access"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="notes">Notes / Constraints</label>
-        <textarea id="notes" name="notes" rows="3" placeholder="e.g., No performance claims, emphasize privacy"></textarea>
+        <label for="constraints">Constraints (optional)</label>
+        <textarea id="constraints" name="constraints" rows="3" placeholder="e.g., Publish date Feb 15, exclude Reddit for this campaign, legal review pending on CTA"></textarea>
       </div>
 
       <details class="reference-section">
         <summary>Reference Documents (optional)</summary>
         <div class="form-group">
-          <label for="referenceDocs">Paste GTM, Product Manual, or other reference text</label>
-          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste reference documents here..."></textarea>
+          <label for="referenceDocs">Paste reference text</label>
+          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste platform guidelines, brand voice docs, or other references..."></textarea>
         </div>
         <div class="form-group">
           <label for="referenceFiles">Or upload reference files (PDF, DOCX, TXT)</label>
@@ -56,12 +41,12 @@
         </div>
       </details>
 
-      <button type="submit" id="submit-btn">Compile Campaign</button>
+      <button type="submit" id="submit-btn">Package for Distribution</button>
     </form>
 
     <div id="output-section" class="hidden">
       <div class="output-header">
-        <h2>Compiled Output</h2>
+        <h2>Distribution Output</h2>
         <button id="copy-btn" type="button">Copy</button>
       </div>
       <div id="output" class="output-content"></div>

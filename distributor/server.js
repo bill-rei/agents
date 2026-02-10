@@ -7,7 +7,7 @@ const { compile } = require('../lib/llm');
 const SYSTEM_PROMPT = require('./system-prompt');
 
 const app = express();
-const PORT = process.env.PORT || 3004;
+const PORT = process.env.DISTRIBUTOR_PORT || 3004;
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -17,12 +17,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/api/compile', upload.array('files'), async (req, res) => {
   try {
     const {
-      campaignTitle,
-      campaignTheme,
-      primaryPersona,
-      useCase,
-      releaseContext,
-      notes,
+      editedAssets,
+      channels,
+      constraints,
       referenceDocs,
     } = req.body;
 
@@ -43,13 +40,16 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
     }
 
     const parts = [
-      `Campaign Title: ${campaignTitle || 'TBD'}`,
-      `Campaign Theme: ${campaignTheme || 'TBD'}`,
-      `Primary Persona: ${primaryPersona || 'TBD'}`,
-      `Use Case or Feature: ${useCase || 'TBD'}`,
-      `Release Context: ${releaseContext || 'TBD'}`,
-      `Notes / Constraints: ${notes || 'None'}`,
+      `Edited Campaign Assets:\n${editedAssets || '[No assets provided]'}`,
     ];
+
+    if (channels) {
+      parts.push(`\nTarget Channels:\n${channels}`);
+    }
+
+    if (constraints) {
+      parts.push(`\nConstraints (dates, exclusions, legal notes):\n${constraints}`);
+    }
 
     if (refText) {
       parts.push(`\nReference Documents:\n${refText}`);
@@ -60,11 +60,11 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
 
     res.json({ result });
   } catch (err) {
-    console.error('Compile error:', err);
-    res.status(500).json({ error: err.message || 'Compilation failed' });
+    console.error('Distributor error:', err);
+    res.status(500).json({ error: err.message || 'Distribution packaging failed' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Distributor running on http://localhost:${PORT}`);
+  console.log(`Marketing Distributor running on http://localhost:${PORT}`);
 });

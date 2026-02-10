@@ -4,14 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node marketing-compiler/server.js",
-    "start:marketing-compiler": "node marketing-compiler/server.js",
-    "start:editor": "node editor/server.js",
-    "start:site-auditor": "node site-auditor/server.js",
-    "start:strategist": "node strategist/server.js",
-    "start:distributor": "node distributor/server.js",
-    "start:optimizer": "node optimizer/server.js"
-  },
+  "start": "node scripts/start-agent.js marketing-compiler",
+  "start:marketing-compiler": "node scripts/start-agent.js marketing-compiler",
+  "start:editor": "node scripts/start-agent.js editor",
+  "start:site-auditor": "node scripts/start-agent.js site-auditor",
+  "start:strategist": "node scripts/start-agent.js strategist",
+  "start:distributor": "node scripts/start-agent.js distributor",
+  "start:optimizer": "node scripts/start-agent.js optimizer",
+
+  "start:agent": "node scripts/start-agent.js",
+  "start:all": "node scripts/start-all.js",
+
+  "check:env": "node scripts/check-env.js"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",

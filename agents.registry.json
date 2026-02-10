@@ -1,0 +1,8 @@
+{
+  "marketing-compiler": "./marketing-compiler/server.js",
+  "editor": "./editor/server.js",
+  "site-auditor": "./site-auditor/server.js",
+  "strategist": "./strategist/server.js",
+  "distributor": "./distributor/server.js",
+  "optimizer": "./optimizer/server.js"
+}

@@ -17,11 +17,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/api/compile', upload.array('files'), async (req, res) => {
   try {
     const {
-      campaignTitle,
-      campaignTheme,
-      primaryPersona,
-      useCase,
-      releaseContext,
+      campaignAssets,
+      auditFindings,
       notes,
       referenceDocs,
     } = req.body;
@@ -43,16 +40,19 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
     }
 
     const parts = [
-      `Campaign Title: ${campaignTitle || 'TBD'}`,
-      `Campaign Theme: ${campaignTheme || 'TBD'}`,
-      `Primary Persona: ${primaryPersona || 'TBD'}`,
-      `Use Case or Feature: ${useCase || 'TBD'}`,
-      `Release Context: ${releaseContext || 'TBD'}`,
-      `Notes / Constraints: ${notes || 'None'}`,
+      `Campaign Assets to Edit:\n${campaignAssets || '[No assets provided]'}`,
     ];
 
+    if (auditFindings) {
+      parts.push(`\nSite Audit Findings:\n${auditFindings}`);
+    }
+
+    if (notes) {
+      parts.push(`\nEditor Notes / Constraints:\n${notes}`);
+    }
+
     if (refText) {
-      parts.push(`\nReference Documents:\n${refText}`);
+      parts.push(`\nReference Documents (SSOT / Product Manual / GTM):\n${refText}`);
     }
 
     const userMessage = parts.join('\n');
@@ -60,11 +60,11 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
 
     res.json({ result });
   } catch (err) {
-    console.error('Compile error:', err);
-    res.status(500).json({ error: err.message || 'Compilation failed' });
+    console.error('Editor error:', err);
+    res.status(500).json({ error: err.message || 'Editing failed' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Editor running on http://localhost:${PORT}`);
+  console.log(`Marketing Editor running on http://localhost:${PORT}`);
 });

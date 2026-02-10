@@ -1,4 +1,4 @@
-const form = document.getElementById('campaign-form');
+const form = document.getElementById('editor-form');
 const submitBtn = document.getElementById('submit-btn');
 const outputSection = document.getElementById('output-section');
 const outputEl = document.getElementById('output');
@@ -12,43 +12,39 @@ form.addEventListener('submit', async (e) => {
   const filesInput = document.getElementById('referenceFiles');
 
   const body = {
-    campaignTitle: form.campaignTitle.value.trim(),
-    campaignTheme: form.campaignTheme.value.trim(),
-    primaryPersona: form.primaryPersona.value.trim(),
-    useCase: form.useCase.value.trim(),
-    releaseContext: form.releaseContext.value.trim(),
+    campaignAssets: form.campaignAssets.value.trim(),
+    auditFindings: form.auditFindings.value.trim(),
     notes: form.notes.value.trim(),
     referenceDocs: form.referenceDocs.value.trim(),
   };
 
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Compiling...';
+  submitBtn.textContent = 'Editing...';
   outputSection.classList.remove('hidden');
   outputEl.className = 'output-content loading';
-  outputEl.textContent = 'Compiling campaign draft. This may take a minute...';
+  outputEl.textContent = 'Editing campaign assets. This may take a minute...';
 
-    try {
-      let res;
+  try {
+    let res;
 
-      // If files were chosen, submit as multipart/form-data
-      if (filesInput && filesInput.files && filesInput.files.length) {
-        const fd = new FormData();
-        Object.keys(body).forEach((k) => { if (body[k]) fd.append(k, body[k]); });
-        for (const f of filesInput.files) fd.append('files', f, f.name);
+    if (filesInput && filesInput.files && filesInput.files.length) {
+      const fd = new FormData();
+      Object.keys(body).forEach((k) => { if (body[k]) fd.append(k, body[k]); });
+      for (const f of filesInput.files) fd.append('files', f, f.name);
 
-        res = await fetch('/api/compile', {
-          method: 'POST',
-          body: fd,
-        });
-      } else {
-        res = await fetch('/api/compile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-      }
+      res = await fetch('/api/compile', {
+        method: 'POST',
+        body: fd,
+      });
+    } else {
+      res = await fetch('/api/compile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    }
 
-      const data = await res.json();
+    const data = await res.json();
 
     if (!res.ok) {
       throw new Error(data.error || 'Request failed');
@@ -63,7 +59,7 @@ form.addEventListener('submit', async (e) => {
     rawOutput = '';
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Compile Campaign';
+    submitBtn.textContent = 'Edit Assets';
   }
 });
 

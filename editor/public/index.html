@@ -3,52 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editor</title>
+  <title>Marketing Editor</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Editor</h1>
-      <p class="subtitle">Review, refine, and polish marketing content</p>
+      <h1>Marketing Editor</h1>
+      <p class="subtitle">Edit campaign assets for clarity, consistency, and channel-fit</p>
     </header>
 
-    <form id="campaign-form">
+    <form id="editor-form">
       <div class="form-group">
-        <label for="campaignTitle">Campaign Title</label>
-        <input type="text" id="campaignTitle" name="campaignTitle" placeholder="e.g., Q1 Privacy-First Launch">
+        <label for="campaignAssets">Campaign Assets to Edit</label>
+        <textarea id="campaignAssets" name="campaignAssets" rows="12" placeholder="Paste compiled campaign output here (blog, Q&A, visual briefs, social copy, etc.)" required></textarea>
       </div>
 
       <div class="form-group">
-        <label for="campaignTheme">Campaign Theme</label>
-        <input type="text" id="campaignTheme" name="campaignTheme" placeholder="e.g., Data Ownership">
+        <label for="auditFindings">Site Audit Findings (optional)</label>
+        <textarea id="auditFindings" name="auditFindings" rows="4" placeholder="Paste site audit findings or suggested edits from SiteAuditor"></textarea>
       </div>
 
       <div class="form-group">
-        <label for="primaryPersona">Primary Persona</label>
-        <input type="text" id="primaryPersona" name="primaryPersona" placeholder="e.g., Health-conscious founder, 30-45">
-      </div>
-
-      <div class="form-group">
-        <label for="useCase">Use Case or Feature</label>
-        <input type="text" id="useCase" name="useCase" placeholder="e.g., Wearable data export + personal dashboard">
-      </div>
-
-      <div class="form-group">
-        <label for="releaseContext">Release Context</label>
-        <textarea id="releaseContext" name="releaseContext" rows="3" placeholder="e.g., Beta launch, iOS only, invite-only access"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="notes">Notes / Constraints</label>
-        <textarea id="notes" name="notes" rows="3" placeholder="e.g., No performance claims, emphasize privacy"></textarea>
+        <label for="notes">Editor Notes / Constraints (optional)</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="e.g., Soften CTA language, fix product naming, check privacy section"></textarea>
       </div>
 
       <details class="reference-section">
-        <summary>Reference Documents (optional)</summary>
+        <summary>Reference Documents (SSOT, Product Manual, GTM)</summary>
         <div class="form-group">
-          <label for="referenceDocs">Paste GTM, Product Manual, or other reference text</label>
-          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste reference documents here..."></textarea>
+          <label for="referenceDocs">Paste reference text</label>
+          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste Product Manual, GTM positioning, or other SSOT documents here..."></textarea>
         </div>
         <div class="form-group">
           <label for="referenceFiles">Or upload reference files (PDF, DOCX, TXT)</label>
@@ -56,12 +41,12 @@
         </div>
       </details>
 
-      <button type="submit" id="submit-btn">Compile Campaign</button>
+      <button type="submit" id="submit-btn">Edit Assets</button>
     </form>
 
     <div id="output-section" class="hidden">
       <div class="output-header">
-        <h2>Compiled Output</h2>
+        <h2>Edited Output</h2>
         <button id="copy-btn" type="button">Copy</button>
       </div>
       <div id="output" class="output-content"></div>

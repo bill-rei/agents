@@ -1,9 +1,10 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
-const parseDoc = require('./lib/parse-doc');
-const { compile } = require('./lib/llm');
+const parseDoc = require('../lib/parse-doc');
+const { compile } = require('../lib/llm');
+const SYSTEM_PROMPT = require('./system-prompt');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,7 +56,7 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
     }
 
     const userMessage = parts.join('\n');
-    const result = await compile(userMessage);
+    const result = await compile(userMessage, SYSTEM_PROMPT);
 
     res.json({ result });
   } catch (err) {

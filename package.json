@@ -4,7 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node marketing-compiler/server.js",
+    "start:marketing-compiler": "node marketing-compiler/server.js",
+    "start:editor": "node editor/server.js",
+    "start:site-auditor": "node site-auditor/server.js",
+    "start:strategist": "node strategist/server.js",
+    "start:distributor": "node distributor/server.js",
+    "start:optimizer": "node optimizer/server.js"
   },
   "keywords": [],
   "author": "",

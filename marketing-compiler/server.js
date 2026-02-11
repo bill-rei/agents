@@ -24,6 +24,7 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
       releaseContext,
       notes,
       outputMode,
+      siteAuditInput,
       referenceDocs,
     } = req.body;
 
@@ -57,6 +58,10 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
 
     if (mode === 'web_page_copy') {
       parts.push('deliverable: web_copy=true');
+    }
+
+    if (siteAuditInput) {
+      parts.push(`\nSite Audit Input (from Marketing.SiteAuditor.v1):\n${siteAuditInput}`);
     }
 
     if (refText) {

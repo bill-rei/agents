@@ -6,6 +6,18 @@ const copyBtn = document.getElementById('copy-btn');
 
 let rawOutput = '';
 
+// Show/hide site audit input based on output mode
+const outputModeSelect = document.getElementById('outputMode');
+const siteAuditGroup = document.getElementById('siteAuditGroup');
+
+outputModeSelect.addEventListener('change', () => {
+  if (outputModeSelect.value === 'web_page_copy') {
+    siteAuditGroup.classList.remove('hidden');
+  } else {
+    siteAuditGroup.classList.add('hidden');
+  }
+});
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -19,6 +31,7 @@ form.addEventListener('submit', async (e) => {
     releaseContext: form.releaseContext.value.trim(),
     notes: form.notes.value.trim(),
     outputMode: form.outputMode.value,
+    siteAuditInput: form.siteAuditInput.value.trim(),
     referenceDocs: form.referenceDocs.value.trim(),
   };
 

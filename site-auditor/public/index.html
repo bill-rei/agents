@@ -3,45 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Marketing Site Auditor</title>
+  <title>Marketing Site Auditor v1.1</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
       <h1>Marketing Site Auditor</h1>
-      <p class="subtitle">Audit website content for clarity, messaging, and credibility</p>
+      <p class="subtitle">Crawl, extract, and evaluate website content against your messaging framework</p>
     </header>
 
     <form id="auditor-form">
-      <div class="form-group">
-        <label for="pageUrl">Page URL (optional)</label>
-        <input type="text" id="pageUrl" name="pageUrl" placeholder="e.g., https://example.com/landing-page">
+      <!-- Audit Mode Toggle -->
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn active" data-mode="single">Single Page</button>
+        <button type="button" class="mode-btn" data-mode="full">Full Site Audit</button>
       </div>
 
-      <div class="form-group">
-        <label for="pageContent">Page Content to Audit</label>
-        <textarea id="pageContent" name="pageContent" rows="12" placeholder="Paste the page content here (HTML, markdown, or plain text)"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="gtmContext">GTM Context / Positioning (optional)</label>
-        <textarea id="gtmContext" name="gtmContext" rows="3" placeholder="e.g., Privacy-first health data platform for founders. Key themes: data ownership, user control, non-extractive."></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="notes">Human Notes (optional)</label>
-        <textarea id="notes" name="notes" rows="3" placeholder="e.g., This page feels off. Hero section might be too vague. Privacy section needs review."></textarea>
-      </div>
-
-      <details class="reference-section">
-        <summary>Reference Documents (Product Manual, GTM, etc.)</summary>
+      <!-- Single Page Fields -->
+      <div id="single-fields">
         <div class="form-group">
-          <label for="referenceDocs">Paste reference text</label>
-          <textarea id="referenceDocs" name="referenceDocs" rows="6" placeholder="Paste Product Manual, GTM docs, or other reference material for the auditor to evaluate against..."></textarea>
+          <label for="pageUrl">Page URL</label>
+          <input type="text" id="pageUrl" name="pageUrl" placeholder="https://example.com/about">
         </div>
+
         <div class="form-group">
-          <label for="referenceFiles">Or upload reference files (PDF, DOCX, TXT)</label>
+          <label for="pageContent">Or paste page content</label>
+          <textarea id="pageContent" name="pageContent" rows="10" placeholder="Paste HTML, markdown, or plain text here (optional if URL provided)"></textarea>
+        </div>
+      </div>
+
+      <!-- Full Site Fields -->
+      <div id="full-site-fields" class="hidden">
+        <div class="form-group">
+          <label for="domain">Primary Domain</label>
+          <input type="text" id="domain" name="domain" placeholder="https://example.com">
+          <span class="field-hint">If no page URLs listed below, pages will be auto-discovered from site navigation</span>
+        </div>
+
+        <div class="form-group">
+          <label for="pageUrls">Page URLs (one per line)</label>
+          <textarea id="pageUrls" name="pageUrls" rows="6" placeholder="https://example.com/&#10;https://example.com/about&#10;https://example.com/product&#10;https://example.com/pricing"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="excludeUrls">Exclude URLs (one per line, optional)</label>
+          <textarea id="excludeUrls" name="excludeUrls" rows="3" placeholder="https://example.com/cart&#10;https://example.com/login"></textarea>
+        </div>
+      </div>
+
+      <!-- Shared Fields -->
+      <div class="form-group">
+        <label for="audienceSegments">Audience Segments (optional)</label>
+        <input type="text" id="audienceSegments" name="audienceSegments" placeholder="e.g., Individuals, Developers, Researchers, Enterprises">
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Operator Notes (optional)</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="e.g., Focus on privacy language. Hero section feels off. Check product claims on pricing page."></textarea>
+      </div>
+
+      <!-- Reference Documents -->
+      <details class="reference-section">
+        <summary>Reference Documents</summary>
+        <p class="ref-hint">The more reference documents provided, the sharper the audit. Without them, language alignment and product reality checks will be skipped.</p>
+
+        <div class="form-group">
+          <label for="founderLanguageGuide">Founder Language Guide</label>
+          <textarea id="founderLanguageGuide" name="founderLanguageGuide" rows="4" placeholder="Preferred terms, avoided terms, reframing patterns, sensitivity zones..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="productManual">Product Manual / Reality Anchor</label>
+          <textarea id="productManual" name="productManual" rows="4" placeholder="What exists today, what is planned, phase/roadmap context..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="messagingFramework">Messaging Framework</label>
+          <textarea id="messagingFramework" name="messagingFramework" rows="4" placeholder="Positioning, canonical phrases, audience-specific framing rules..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="brandSeparationRules">Brand / Entity Separation Rules</label>
+          <textarea id="brandSeparationRules" name="brandSeparationRules" rows="3" placeholder="If multiple entities exist (e.g., nonprofit + product company), their roles and boundaries..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="strategicGuardrails">Strategic Guardrails</label>
+          <textarea id="strategicGuardrails" name="strategicGuardrails" rows="3" placeholder="Hard constraints the messaging must never violate..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="referenceDocs">Additional Reference Text</label>
+          <textarea id="referenceDocs" name="referenceDocs" rows="4" placeholder="Any other reference material for evaluation..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="referenceFiles">Upload Reference Files (PDF, DOCX, TXT)</label>
           <input type="file" id="referenceFiles" name="files" multiple accept=".pdf,.docx,.txt,text/plain">
         </div>
       </details>

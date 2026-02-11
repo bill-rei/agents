@@ -65,12 +65,22 @@ If no reference documents are provided, the agent can still run a structural and
 
 Before evaluating anything, you must retrieve the site content. Do not ask the human to provide it.
 
+### URL Formatting (Critical)
+
+Before fetching any page, ensure every URL meets these requirements:
+- **Must include the protocol prefix** — always \`https://\` unless the site explicitly requires \`http://\`
+- **Must be a complete, absolute URL** — e.g., \`https://example.com/about/\` not \`example.com/about/\`
+- If the site manifest or inferred navigation provides relative paths (e.g., \`/about/\`), prepend the full domain with protocol
+- If a URL lacks a trailing slash and the server redirects to add one, use the version with the trailing slash going forward
+- **Test the homepage URL first.** If it fails, halt and report the connectivity issue before attempting remaining pages.
+
 ### Crawl Execution
 
 1. Use the site manifest (provided or inferred) to determine the page list.
-2. Fetch each page in priority order.
-3. Extract text content from each — focus on body content, headings, CTAs, and meta descriptions. Skip repeated navigation, footers, and cookie banners.
-4. For each page, record:
+2. **Normalize all URLs** per the formatting rules above before any fetch attempt.
+3. Fetch each page in priority order, starting with the homepage as a connectivity check.
+4. Extract text content from each — focus on body content, headings, CTAs, and meta descriptions. Skip repeated navigation, footers, and cookie banners.
+5. For each page, record:
    - URL
    - Page title
    - Approximate word count
@@ -78,9 +88,11 @@ Before evaluating anything, you must retrieve the site content. Do not ask the h
 
 ### Crawl Rules
 
+- **Self-recovery on URL errors:** If a fetch fails due to URL parsing, malformed URL, or similar formatting error, check the URL against the formatting rules above, fix it, and retry once before logging a failure. Do not report a crawl failure caused by a fixable URL formatting issue.
 - If a page returns an error or redirect, log it and continue — do not halt the audit.
 - If a page is gated (login required), flag it as **"not publicly auditable"** and move on.
 - If the site has more than 30 publicly accessible pages, audit the manifest pages first and note the uncovered pages as "out of scope for this pass."
+- If all pages fail on the first attempt, check whether the issue is systemic (DNS, protocol, network) before reporting — do not produce an audit report that contains zero evaluated pages.
 - Store the extracted text for evaluation in Phase 2.
 
 ---

@@ -1,0 +1,14 @@
+{
+  "name": "marketing-artifacts",
+  "version": "1.0.0",
+  "description": "JSON Schema, TypeScript types, and validators for marketing artifacts",
+  "main": "index.js",
+  "types": "types.d.ts",
+  "scripts": {
+    "test": "node --test __tests__/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

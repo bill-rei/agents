@@ -1,0 +1,18 @@
+{
+  "artifact_id": "reddit-saas-tips-001",
+  "brand": "acme-corp",
+  "artifact_type": "social_post",
+  "target": {
+    "platform": "reddit"
+  },
+  "content": {
+    "body": "Here are 5 lessons we learned scaling our SaaS to 10k users. Hope this helps someone starting out.",
+    "cta": "Sign up free at acme.com/start",
+    "hashtags": ["#SaaS"]
+  },
+  "status": "draft",
+  "provenance": {
+    "agent": "distributor",
+    "created_at": "2026-02-12T10:00:00Z"
+  }
+}

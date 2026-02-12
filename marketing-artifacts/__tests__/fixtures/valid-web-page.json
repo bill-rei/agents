@@ -1,0 +1,25 @@
+{
+  "artifact_id": "wp-home-2026-02",
+  "brand": "acme-corp",
+  "artifact_type": "web_page",
+  "target": {
+    "platform": "wordpress",
+    "slug": "home",
+    "elementor": true
+  },
+  "content": {
+    "title": "Welcome to Acme Corp",
+    "html": "<section class=\"hero\"><h1>Innovate with Acme</h1><p>We build solutions that matter.</p></section>",
+    "status": "draft"
+  },
+  "status": "draft",
+  "provenance": {
+    "agent": "marketing-compiler",
+    "created_at": "2026-02-12T14:30:00Z",
+    "session_id": "sess-abc123"
+  },
+  "constraints": ["brand_voice", "max_sections:6"],
+  "metadata": {
+    "campaign": "q1-refresh"
+  }
+}

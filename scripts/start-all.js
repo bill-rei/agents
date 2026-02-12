@@ -13,6 +13,14 @@ if (!fs.existsSync(registryPath)) {
 const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
 
 for (const agentKey of Object.keys(registry)) {
+  const raw = registry[agentKey];
+  const type = typeof raw === "string" ? "server" : (raw.type || "server");
+
+  if (type === "cli") {
+    console.log(`[start-all] Skipping CLI agent: ${agentKey}`);
+    continue;
+  }
+
   console.log(`[start-all] Launching ${agentKey}`);
 
   // spawn a new Node process per agent so they don't share the same event loop

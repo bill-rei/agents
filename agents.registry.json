@@ -5,5 +5,9 @@
   "strategist": "./strategist/server.js",
   "distributor": "./distributor/server.js",
   "optimizer": "./optimizer/server.js",
-  "website-messaging-architect": "./website-messaging-architect/server.js"
+  "website-messaging-architect": "./website-messaging-architect/server.js",
+  "marketing-staging-sync": {
+    "entry": "./marketing-staging-sync/push-page.mjs",
+    "type": "cli"
+  }
 }

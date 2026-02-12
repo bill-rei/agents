@@ -1,8 +1,12 @@
 // ── Target types ──────────────────────────────────────────────
 
+export type StagingSiteKey = "llif-staging" | "bestlife-staging";
+
 export interface WebPageTarget {
   platform: "wordpress";
-  slug: string;
+  site_key: StagingSiteKey;
+  slug?: string;
+  page_id?: number;
   elementor?: boolean;
 }
 

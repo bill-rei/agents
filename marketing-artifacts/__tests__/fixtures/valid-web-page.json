@@ -4,6 +4,7 @@
   "artifact_type": "web_page",
   "target": {
     "platform": "wordpress",
+    "site_key": "llif-staging",
     "slug": "home",
     "elementor": true
   },

@@ -1,0 +1,27 @@
+{
+  "artifact_id": "wp-llif-home-2026-02",
+  "brand": "llif",
+  "artifact_type": "web_page",
+  "target": {
+    "platform": "wordpress",
+    "site_key": "llif-staging",
+    "slug": "home",
+    "elementor": true
+  },
+  "content": {
+    "title": "Live Life Intentionally",
+    "html": "<section class=\"hero\"><h1>Live Life Intentionally</h1><p>Science-backed strategies for a longer, healthier, more fulfilling life.</p></section><section class=\"features\"><h2>What We Cover</h2><ul><li>Longevity research</li><li>Mental wellness</li><li>Nutrition &amp; movement</li></ul></section>",
+    "status": "draft"
+  },
+  "status": "draft",
+  "provenance": {
+    "agent": "marketing-compiler",
+    "created_at": "2026-02-12T16:00:00Z",
+    "session_id": "sess-llif-homepage"
+  },
+  "constraints": ["brand_voice", "max_sections:5"],
+  "metadata": {
+    "campaign": "q1-site-refresh",
+    "notes": "Initial homepage draft for staging review"
+  }
+}

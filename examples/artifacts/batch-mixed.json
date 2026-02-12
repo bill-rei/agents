@@ -1,0 +1,61 @@
+[
+  {
+    "artifact_id": "wp-llif-home-2026-02",
+    "brand": "llif",
+    "artifact_type": "web_page",
+    "target": {
+      "platform": "wordpress",
+      "site_key": "llif-staging",
+      "slug": "home",
+      "elementor": true
+    },
+    "content": {
+      "title": "Live Life Intentionally",
+      "html": "<section><h1>Welcome</h1></section>",
+      "status": "draft"
+    },
+    "status": "draft",
+    "provenance": {
+      "agent": "marketing-compiler",
+      "created_at": "2026-02-12T16:00:00Z"
+    }
+  },
+  {
+    "artifact_id": "wp-bestlife-about-2026-02",
+    "brand": "bestlife",
+    "artifact_type": "web_page",
+    "target": {
+      "platform": "wordpress",
+      "site_key": "bestlife-staging",
+      "slug": "about",
+      "elementor": false
+    },
+    "content": {
+      "title": "About Best Life",
+      "html": "<section><h1>Our Story</h1><p>We help you live better.</p></section>",
+      "status": "draft"
+    },
+    "status": "review",
+    "provenance": {
+      "agent": "editor",
+      "created_at": "2026-02-12T17:00:00Z"
+    }
+  },
+  {
+    "artifact_id": "li-launch-post-001",
+    "brand": "llif",
+    "artifact_type": "social_post",
+    "target": {
+      "platform": "linkedin"
+    },
+    "content": {
+      "body": "Excited to announce our new platform!",
+      "hashtags": ["#Launch"]
+    },
+    "status": "approved",
+    "provenance": {
+      "agent": "distributor",
+      "created_at": "2026-02-12T18:00:00Z"
+    }
+  }
+]

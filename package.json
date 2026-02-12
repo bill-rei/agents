@@ -15,6 +15,7 @@
     "start:staging-sync": "node scripts/start-agent.js marketing-staging-sync --",
     "start:agent": "node scripts/start-agent.js",
     "start:all": "node scripts/start-all.js",
+    "publish": "node scripts/publish.js",
     "check:env": "node scripts/check-env.js",
     "test": "node --test 'marketing-artifacts/__tests__/*.test.js'"
   },

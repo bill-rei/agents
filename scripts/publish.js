@@ -1,0 +1,196 @@
+#!/usr/bin/env node
+require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
+
+const fs = require("fs");
+const path = require("path");
+const { validateArtifact } = require("../marketing-artifacts");
+const wpAdapter = require("../publishers/web/wpElementorStaging");
+
+// ── Arg parsing ──
+
+function parseArgs(argv) {
+  const args = argv.slice(2);
+  const opts = { file: null, dryRun: false, apply: false, only: null };
+
+  for (let i = 0; i < args.length; i++) {
+    switch (args[i]) {
+      case "--file":
+        opts.file = args[++i];
+        break;
+      case "--dry-run":
+        opts.dryRun = true;
+        break;
+      case "--apply":
+        opts.apply = true;
+        break;
+      case "--only":
+        opts.only = parseFilter(args[++i]);
+        break;
+      default:
+        console.error(`Unknown flag: ${args[i]}`);
+        process.exit(1);
+    }
+  }
+
+  return opts;
+}
+
+function parseFilter(expr) {
+  if (!expr || !expr.includes("=")) {
+    console.error('--only expects key=value (e.g. --only site_key=llif-staging)');
+    process.exit(1);
+  }
+  const [key, ...rest] = expr.split("=");
+  return { key, value: rest.join("=") };
+}
+
+function usage() {
+  console.log("Usage:");
+  console.log("  node scripts/publish.js --file <artifacts.json> --dry-run");
+  console.log("  node scripts/publish.js --file <artifacts.json> --apply");
+  console.log("");
+  console.log("Options:");
+  console.log("  --file <path>              JSON file with one artifact or an array");
+  console.log("  --dry-run                  Print what would happen without publishing");
+  console.log("  --apply                    Actually publish to staging");
+  console.log("  --only key=value           Filter artifacts (e.g. --only site_key=llif-staging)");
+}
+
+// ── Filter ──
+
+function matchesFilter(artifact, filter) {
+  if (!filter) return true;
+  const { key, value } = filter;
+
+  // Check top-level fields first, then target
+  if (artifact[key] === value) return true;
+  if (artifact.target && artifact.target[key] === value) return true;
+  return false;
+}
+
+// ── Routing ──
+
+async function publishOne(artifact, opts) {
+  switch (artifact.artifact_type) {
+    case "web_page":
+      return await wpAdapter.publish(artifact, { dryRun: opts.dryRun });
+    case "social_post":
+      console.log(`  [stub] social_post publishing not implemented (${artifact.target?.platform || "unknown"})`);
+      return { status: "not-implemented" };
+    case "blog_post":
+      console.log(`  [stub] blog_post publishing not implemented`);
+      return { status: "not-implemented" };
+    default:
+      throw new Error(`Unknown artifact_type: "${artifact.artifact_type}"`);
+  }
+}
+
+// ── Summary table ──
+
+function printSummary(results) {
+  console.log("");
+  console.log("─".repeat(72));
+  console.log("  Summary");
+  console.log("─".repeat(72));
+
+  const idWidth = Math.max(12, ...results.map((r) => r.id.length));
+  const header = `  ${"artifact_id".padEnd(idWidth)}  ${"type".padEnd(13)}  ${"result".padEnd(10)}  detail`;
+  console.log(header);
+  console.log("  " + "─".repeat(idWidth + 38));
+
+  for (const r of results) {
+    const icon = r.ok ? "ok" : "FAIL";
+    const detail = r.detail || "";
+    console.log(`  ${r.id.padEnd(idWidth)}  ${r.type.padEnd(13)}  ${icon.padEnd(10)}  ${detail}`);
+  }
+
+  const passed = results.filter((r) => r.ok).length;
+  const failed = results.filter((r) => !r.ok).length;
+  console.log("");
+  console.log(`  ${passed} succeeded, ${failed} failed, ${results.length} total`);
+  console.log("");
+}
+
+// ── Main ──
+
+async function main() {
+  const opts = parseArgs(process.argv);
+
+  if (!opts.file) {
+    usage();
+    process.exit(1);
+  }
+
+  if (!opts.dryRun && !opts.apply) {
+    console.error("Error: must specify either --dry-run or --apply");
+    process.exit(1);
+  }
+
+  if (opts.dryRun && opts.apply) {
+    console.error("Error: --dry-run and --apply are mutually exclusive");
+    process.exit(1);
+  }
+
+  // Load artifacts
+  const filePath = path.resolve(opts.file);
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (err) {
+    console.error(`Failed to read ${filePath}: ${err.message}`);
+    process.exit(1);
+  }
+
+  const artifacts = Array.isArray(raw) ? raw : [raw];
+  console.log(`Loaded ${artifacts.length} artifact(s) from ${opts.file}`);
+
+  if (opts.dryRun) console.log("[dry-run mode]");
+  console.log("");
+
+  // Filter
+  const filtered = artifacts.filter((a) => matchesFilter(a, opts.only));
+  if (opts.only) {
+    console.log(`Filter --only ${opts.only.key}=${opts.only.value}: ${filtered.length} of ${artifacts.length} matched`);
+    console.log("");
+  }
+
+  // Process
+  const results = [];
+
+  for (const artifact of filtered) {
+    const id = artifact.artifact_id || "(no id)";
+    const type = artifact.artifact_type || "(no type)";
+    console.log(`>> ${id} (${type})`);
+
+    // Validate
+    const validation = validateArtifact(artifact);
+    if (!validation.valid) {
+      console.log(`   Validation failed:`);
+      for (const e of validation.errors) console.log(`     - ${e}`);
+      results.push({ id, type, ok: false, detail: validation.errors[0] });
+      continue;
+    }
+
+    // Publish
+    try {
+      const res = await publishOne(artifact, opts);
+      const detail =
+        res.status === "not-implemented"
+          ? "stub — not implemented"
+          : res.status === "dry-run"
+            ? `dry-run ok`
+            : res.link || res.status;
+      results.push({ id, type, ok: true, detail });
+    } catch (err) {
+      console.log(`   Error: ${err.message}`);
+      results.push({ id, type, ok: false, detail: err.message });
+    }
+  }
+
+  printSummary(results);
+
+  const anyFailed = results.some((r) => !r.ok);
+  process.exit(anyFailed ? 1 : 0);
+}
+
+main();

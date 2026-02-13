@@ -6,12 +6,14 @@ const path = require("path");
 const { validateArtifact } = require("../marketing-artifacts");
 const wpAdapter = require("../publishers/web/wpElementorStaging");
 const zohoAdapter = require("../publishers/social/zohoSocial");
+const xDirectAdapter = require("../publishers/social/xDirect");
+const linkedinDirectAdapter = require("../publishers/social/linkedinDirect");
 
 // ── Arg parsing ──
 
 function parseArgs(argv) {
   const args = argv.slice(2);
-  const opts = { file: null, dryRun: false, apply: false, only: null };
+  const opts = { file: null, dryRun: false, apply: false, forceLive: false, only: null };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -23,6 +25,9 @@ function parseArgs(argv) {
         break;
       case "--apply":
         opts.apply = true;
+        break;
+      case "--force-live":
+        opts.forceLive = true;
         break;
       case "--only":
         opts.only = parseFilter(args[++i]);
@@ -55,6 +60,7 @@ function usage() {
   console.log("  --dry-run                  Print what would happen without publishing");
   console.log("  --apply                    Actually publish to staging");
   console.log("  --only key=value           Filter artifacts (e.g. --only site_key=llif-staging)");
+  console.log("  --force-live               Allow live posting for status=published artifacts");
 }
 
 // ── Filter ──
@@ -81,6 +87,16 @@ async function publishOne(artifact, opts) {
         console.log(`  [stub] Reddit publishing not routed through Zoho — not implemented`);
         return { status: "not-implemented" };
       }
+      // Live posts (status=published) go through direct adapters
+      if (artifact.status === "published") {
+        if (platform === "x") {
+          return await xDirectAdapter.publish(artifact, { dryRun: opts.dryRun, forceLive: opts.forceLive });
+        }
+        if (platform === "linkedin") {
+          return await linkedinDirectAdapter.publish(artifact, { dryRun: opts.dryRun, forceLive: opts.forceLive });
+        }
+      }
+      // Drafts, scheduled, and other statuses go through Zoho
       if (zohoAdapter.SUPPORTED_PLATFORMS.includes(platform)) {
         return await zohoAdapter.publish(artifact, { dryRun: opts.dryRun });
       }
@@ -154,6 +170,7 @@ async function main() {
   console.log(`Loaded ${artifacts.length} artifact(s) from ${opts.file}`);
 
   if (opts.dryRun) console.log("[dry-run mode]");
+  if (opts.forceLive) console.log("[--force-live enabled — live posting permitted]");
   console.log("");
 
   // Filter
@@ -188,7 +205,7 @@ async function main() {
           ? "stub — not implemented"
           : res.status === "dry-run"
             ? `dry-run ok`
-            : res.link || res.status;
+            : res.url || res.link || res.status;
       results.push({ id, type, ok: true, detail });
     } catch (err) {
       console.log(`   Error: ${err.message}`);

@@ -12,6 +12,7 @@ export interface WebPageTarget {
 
 export interface SocialPostTarget {
   platform: "x" | "linkedin" | "reddit" | "facebook" | "instagram";
+  account_type?: "organization" | "person";
   reddit_mode?: "discussion" | "value_first" | "ama";
 }
 

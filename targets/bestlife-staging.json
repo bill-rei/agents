@@ -1,0 +1,14 @@
+{
+  "site_key": "bestlife-staging",
+  "label": "Best Life – Staging",
+  "environment": "staging",
+  "base_url_env": "WP_BESTLIFE_STAGING_URL",
+  "pages": {
+    "home": { "slug": "home", "title": "Homepage" },
+    "about": { "slug": "about-us", "title": "About Us" },
+    "articles": { "slug": "articles", "title": "Articles Index" },
+    "contact": { "slug": "contact", "title": "Contact" },
+    "wellness": { "slug": "wellness-hub", "title": "Wellness Hub" },
+    "subscribe": { "slug": "subscribe", "title": "Subscribe" }
+  }
+}

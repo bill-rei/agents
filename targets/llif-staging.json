@@ -1,0 +1,15 @@
+{
+  "site_key": "llif-staging",
+  "label": "LLIF – Staging",
+  "environment": "staging",
+  "base_url_env": "WP_LLIF_STAGING_URL",
+  "pages": {
+    "home": { "slug": "home", "title": "Homepage" },
+    "about": { "slug": "about", "title": "About" },
+    "programs": { "slug": "programs", "title": "Programs" },
+    "blog": { "slug": "blog", "title": "Blog Index" },
+    "contact": { "slug": "contact", "title": "Contact" },
+    "longevity": { "slug": "longevity-program", "title": "Longevity Program" },
+    "membership": { "slug": "membership", "title": "Membership" }
+  }
+}

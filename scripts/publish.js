@@ -9,12 +9,13 @@ const zohoAdapter = require("../publishers/social/zohoSocial");
 const xDirectAdapter = require("../publishers/social/xDirect");
 const linkedinDirectAdapter = require("../publishers/social/linkedinDirect");
 const redditGuard = require("../publishers/social/redditGuard");
+const { loadRegistry, resolvePageSlug, listSiteKeys, listPageKeys } = require("../lib/targetRegistry");
 
 // ── Arg parsing ──
 
 function parseArgs(argv) {
   const args = argv.slice(2);
-  const opts = { file: null, dryRun: false, apply: false, forceLive: false, only: null };
+  const opts = { file: null, dryRun: false, apply: false, forceLive: false, only: null, site: null, page: null };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -32,6 +33,12 @@ function parseArgs(argv) {
         break;
       case "--only":
         opts.only = parseFilter(args[++i]);
+        break;
+      case "--site":
+        opts.site = args[++i];
+        break;
+      case "--page":
+        opts.page = args[++i];
         break;
       default:
         console.error(`Unknown flag: ${args[i]}`);
@@ -55,6 +62,7 @@ function usage() {
   console.log("Usage:");
   console.log("  node scripts/publish.js --file <artifacts.json> --dry-run");
   console.log("  node scripts/publish.js --file <artifacts.json> --apply");
+  console.log("  node scripts/publish.js --site <site_key> --page <page_key> --file <artifact.json> --dry-run");
   console.log("");
   console.log("Options:");
   console.log("  --file <path>              JSON file with one artifact or an array");
@@ -62,6 +70,19 @@ function usage() {
   console.log("  --apply                    Actually publish to staging");
   console.log("  --only key=value           Filter artifacts (e.g. --only site_key=llif-staging)");
   console.log("  --force-live               Allow live posting for status=published artifacts");
+  console.log("  --site <site_key>          Target site from registry (e.g. llif-staging)");
+  console.log("  --page <page_key>          Page key from registry (e.g. home, about)");
+  console.log("");
+  console.log("Available sites:");
+  try {
+    for (const key of listSiteKeys()) {
+      const reg = loadRegistry(key);
+      const pages = listPageKeys(key).join(", ");
+      console.log(`  ${key} (${reg.label}): ${pages}`);
+    }
+  } catch (_) {
+    console.log("  (could not read targets/)");
+  }
 }
 
 // ── Filter ──
@@ -156,6 +177,29 @@ async function main() {
     process.exit(1);
   }
 
+  if (opts.page && !opts.site) {
+    console.error("Error: --page requires --site");
+    process.exit(1);
+  }
+
+  // Validate --site against registry (staging-only guard)
+  if (opts.site) {
+    const reg = loadRegistry(opts.site);
+    if (reg.environment !== "staging") {
+      console.error(
+        `Error: site "${opts.site}" has environment="${reg.environment}". ` +
+        "Only staging sites are supported."
+      );
+      process.exit(1);
+    }
+    console.log(`Registry: ${reg.label} (${opts.site})`);
+    if (opts.page) {
+      const pageInfo = resolvePageSlug(opts.site, opts.page);
+      console.log(`Page: ${opts.page} → slug "${pageInfo.slug}"${pageInfo.page_id ? ` (id: ${pageInfo.page_id})` : ""}`);
+    }
+    console.log("");
+  }
+
   // Load artifacts
   const filePath = path.resolve(opts.file);
   let raw;
@@ -168,6 +212,21 @@ async function main() {
 
   const artifacts = Array.isArray(raw) ? raw : [raw];
   console.log(`Loaded ${artifacts.length} artifact(s) from ${opts.file}`);
+
+  // Apply --site / --page overrides from registry
+  if (opts.site || opts.page) {
+    for (const artifact of artifacts) {
+      if (!artifact.target) artifact.target = {};
+      if (opts.site) {
+        artifact.target.site_key = opts.site;
+      }
+      if (opts.page) {
+        const pageInfo = resolvePageSlug(opts.site, opts.page);
+        artifact.target.slug = pageInfo.slug;
+        if (pageInfo.page_id) artifact.target.page_id = pageInfo.page_id;
+      }
+    }
+  }
 
   if (opts.dryRun) console.log("[dry-run mode]");
   if (opts.forceLive) console.log("[--force-live enabled — live posting permitted]");

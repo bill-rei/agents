@@ -1,0 +1,21 @@
+{
+  "artifact_id": "li-q1-launch-001",
+  "brand": "llif",
+  "artifact_type": "social_post",
+  "target": {
+    "platform": "linkedin"
+  },
+  "content": {
+    "body": "We spent 6 months studying longevity research so you don't have to.\n\nHere are the 3 habits that actually move the needle:\n\n1. Sleep consistency beats sleep duration\n2. Zone 2 cardio 3x/week outperforms daily intense workouts\n3. Social connection is the most underrated longevity factor\n\nWhich one surprised you most?",
+    "hashtags": ["#Longevity", "#HealthScience", "#LiveIntentionally"],
+    "cta": "Follow us for weekly evidence-based health insights"
+  },
+  "status": "approved",
+  "provenance": {
+    "agent": "distributor",
+    "created_at": "2026-02-12T10:00:00Z"
+  },
+  "schedule_at": "2026-02-17T14:00:00Z",
+  "human_approval": true,
+  "review_notes": "Approved by content lead — scheduled for Monday 2pm EST"
+}

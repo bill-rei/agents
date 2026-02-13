@@ -1,0 +1,20 @@
+{
+  "artifact_id": "x-q1-teaser-001",
+  "brand": "llif",
+  "artifact_type": "social_post",
+  "target": {
+    "platform": "x"
+  },
+  "content": {
+    "body": "Sleep consistency > sleep duration.\n\nGoing to bed at the same time every night matters more than logging 8 hours.\n\nThe research is clear on this one.",
+    "hashtags": ["#SleepScience", "#Longevity"]
+  },
+  "status": "approved",
+  "provenance": {
+    "agent": "distributor",
+    "created_at": "2026-02-12T11:00:00Z"
+  },
+  "schedule_at": "2026-02-17T12:00:00Z",
+  "human_approval": true,
+  "review_notes": "Short-form teaser to pair with LinkedIn post — same day, earlier slot"
+}

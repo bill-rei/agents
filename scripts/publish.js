@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { validateArtifact } = require("../marketing-artifacts");
 const wpAdapter = require("../publishers/web/wpElementorStaging");
+const zohoAdapter = require("../publishers/social/zohoSocial");
 
 // ── Arg parsing ──
 
@@ -74,9 +75,17 @@ async function publishOne(artifact, opts) {
   switch (artifact.artifact_type) {
     case "web_page":
       return await wpAdapter.publish(artifact, { dryRun: opts.dryRun });
-    case "social_post":
-      console.log(`  [stub] social_post publishing not implemented (${artifact.target?.platform || "unknown"})`);
-      return { status: "not-implemented" };
+    case "social_post": {
+      const platform = artifact.target?.platform;
+      if (platform === "reddit") {
+        console.log(`  [stub] Reddit publishing not routed through Zoho — not implemented`);
+        return { status: "not-implemented" };
+      }
+      if (zohoAdapter.SUPPORTED_PLATFORMS.includes(platform)) {
+        return await zohoAdapter.publish(artifact, { dryRun: opts.dryRun });
+      }
+      throw new Error(`Unsupported social platform: "${platform}"`);
+    }
     case "blog_post":
       console.log(`  [stub] blog_post publishing not implemented`);
       return { status: "not-implemented" };

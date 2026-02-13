@@ -14,7 +14,7 @@ const webPageTarget = {
 const socialPostTarget = {
   type: "object",
   properties: {
-    platform: { type: "string", enum: ["x", "linkedin", "reddit"] },
+    platform: { type: "string", enum: ["x", "linkedin", "reddit", "facebook", "instagram"] },
     reddit_mode: {
       type: "string",
       enum: ["discussion", "value_first", "ama"],

@@ -12,6 +12,7 @@
     "start:distributor": "node scripts/start-agent.js distributor",
     "start:optimizer": "node scripts/start-agent.js optimizer",
     "start:wma": "node scripts/start-agent.js website-messaging-architect",
+    "start:renderer": "node scripts/start-agent.js web-renderer",
     "start:staging-sync": "node scripts/start-agent.js marketing-staging-sync --",
     "start:agent": "node scripts/start-agent.js",
     "start:all": "node scripts/start-all.js",

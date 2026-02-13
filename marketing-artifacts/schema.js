@@ -97,6 +97,10 @@ const artifactSchema = {
     },
     provenance,
     schedule_at: { type: "string", format: "date-time" },
+    content_format: {
+      type: "string",
+      enum: ["html", "markdown", "text"],
+    },
     constraints: { type: "array", items: { type: "string" } },
     review_notes: { type: "string" },
     human_approval: { type: "boolean" },

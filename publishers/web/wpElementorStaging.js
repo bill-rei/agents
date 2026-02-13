@@ -103,10 +103,22 @@ async function publish(artifact, opts = {}) {
     }
   }
 
-  // 4. Convert markdown → HTML if needed
-  const { html: resolvedHtml, converted } = ensureHtml(content.html);
-  if (converted) {
-    console.log(`  [md→html] Converted markdown content to HTML`);
+  // 4. Convert markdown → HTML if needed (skip if upstream already rendered)
+  let resolvedHtml;
+  if (artifact.content_format === "html") {
+    resolvedHtml = content.html;
+    console.log(`  [html] content_format is html; skipping conversion`);
+  } else {
+    if (artifact.content_format) {
+      console.log(`  [warn] web_page content_format is "${artifact.content_format}"; using fallback conversion`);
+    } else {
+      console.log(`  [warn] web_page content_format not html; using fallback conversion`);
+    }
+    const { html, converted } = ensureHtml(content.html);
+    resolvedHtml = html;
+    if (converted) {
+      console.log(`  [md→html] Converted markdown content to HTML`);
+    }
   }
 
   // 5. Build WP payload

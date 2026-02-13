@@ -1,0 +1,21 @@
+{
+  "artifact_id": "bestlife-home-rendered-001",
+  "brand": "bestlife",
+  "artifact_type": "web_page",
+  "content_format": "html",
+  "target": {
+    "platform": "wordpress",
+    "site_key": "bestlife-staging",
+    "slug": "bestlife-homepage-agent-draft"
+  },
+  "content": {
+    "title": "Best Life – Live Your Best Life Every Day",
+    "html": "<h1>Best Life – Live Your Best Life Every Day</h1>\n<section>\n  <h2>Welcome to Best Life</h2>\n  <p>Your journey to <strong>wellness</strong>, <strong>longevity</strong>, and <strong>fulfillment</strong> starts here.</p>\n</section>\n<section>\n  <h2>What We Offer</h2>\n  <ul>\n    <li>Expert wellness guidance</li>\n    <li>Science-backed longevity tips</li>\n    <li>Community support and events</li>\n  </ul>\n</section>\n<section>\n  <h2>Why Best Life?</h2>\n  <p>We believe that living well is not about perfection. It is about making small, intentional choices every day.</p>\n  <p>Our platform brings together trusted resources, practical tools, and a supportive community to help you on your journey.</p>\n</section>\n<section>\n  <p><strong>CTA:</strong> Start your wellness journey today</p>\n  <p><strong>CTA:</strong> Explore our programs</p>\n  <p><strong>CTA:</strong> Join the community</p>\n</section>"
+  },
+  "status": "draft",
+  "provenance": {
+    "agent": "web-renderer",
+    "created_at": "2026-02-13T12:00:00Z"
+  },
+  "human_approval": false
+}

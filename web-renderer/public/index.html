@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Renderer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Web Renderer</h1>
+      <p class="subtitle">Convert structured web copy to clean HTML for WordPress</p>
+    </header>
+
+    <form id="renderer-form">
+      <div class="form-group">
+        <label for="rawCopy">Structured Copy (from WMA or Editor)</label>
+        <textarea id="rawCopy" name="rawCopy" rows="16" placeholder="Paste WMA or Editor output here...
+
+Example:
+### Section 1: Hero
+**H1:** Welcome to Best Life
+**Subhead:** Your wellness journey starts here
+
+**Body Copy:**
+Discover the tools and community you need.
+
+• Expert wellness guidance
+• Science-backed longevity tips
+• Community support" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="pageName">Page Name</label>
+        <input type="text" id="pageName" name="pageName" placeholder="e.g., Homepage, About Us">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="renderProfile">Render Profile (optional)</label>
+          <input type="text" id="renderProfile" name="renderProfile" placeholder="e.g., bestlife-standard">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="constraints">Rendering Constraints (optional, one per line)</label>
+        <textarea id="constraints" name="constraints" rows="3" placeholder="e.g., No medical claims&#10;No roadmap language"></textarea>
+      </div>
+
+      <button type="submit" id="submit-btn">Render HTML</button>
+    </form>
+
+    <div id="output-section" class="hidden">
+      <div class="output-header">
+        <h2>Rendered HTML</h2>
+        <div class="output-actions">
+          <button id="toggle-btn" type="button" class="secondary-btn">Preview</button>
+          <button id="copy-btn" type="button" class="secondary-btn">Copy</button>
+        </div>
+      </div>
+      <div id="output" class="output-content"></div>
+      <div id="preview" class="preview-content hidden"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

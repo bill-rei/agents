@@ -1,0 +1,19 @@
+{
+  "artifact_id": "wp-home-legacy-001",
+  "brand": "bestlife",
+  "artifact_type": "web_page",
+  "target": {
+    "platform": "wordpress",
+    "site_key": "bestlife-staging",
+    "slug": "bestlife-homepage-agent-draft"
+  },
+  "content": {
+    "title": "Best Life – Your Wellness Journey",
+    "html": "<h1>Best Life</h1><p>Content here.</p>"
+  },
+  "status": "draft",
+  "provenance": {
+    "agent": "website-messaging-architect",
+    "created_at": "2026-02-13T10:00:00Z"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "artifact_id": "reddit-longevity-001",
+  "brand": "llif",
+  "artifact_type": "social_post",
+  "target": {
+    "platform": "reddit",
+    "reddit_mode": "discussion"
+  },
+  "content": {
+    "body": "I've been reading a lot about how sleep consistency matters more than total hours. Going to bed and waking up at the same time every day seems to have a bigger effect on energy and cognitive function than just trying to hit 8 hours.\n\nAnyone else experimented with this? What has worked for you?"
+  },
+  "status": "draft",
+  "provenance": {
+    "agent": "distributor",
+    "created_at": "2026-02-12T10:00:00Z"
+  }
+}

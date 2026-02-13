@@ -1,0 +1,20 @@
+{
+  "artifact_id": "reddit-promo-blocked-001",
+  "brand": "llif",
+  "artifact_type": "social_post",
+  "target": {
+    "platform": "reddit",
+    "reddit_mode": "discussion"
+  },
+  "content": {
+    "body": "We at LLIF just launched our new longevity program! Check out what LLIF has been building at https://llif.com/launch. Sign up for a free trial today.",
+    "cta": "Visit llif.com to get started",
+    "hashtags": ["#Longevity", "#HealthTech"],
+    "media_urls": ["https://llif.com/images/launch-banner.png"]
+  },
+  "status": "draft",
+  "provenance": {
+    "agent": "distributor",
+    "created_at": "2026-02-12T10:00:00Z"
+  }
+}

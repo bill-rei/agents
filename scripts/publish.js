@@ -8,6 +8,7 @@ const wpAdapter = require("../publishers/web/wpElementorStaging");
 const zohoAdapter = require("../publishers/social/zohoSocial");
 const xDirectAdapter = require("../publishers/social/xDirect");
 const linkedinDirectAdapter = require("../publishers/social/linkedinDirect");
+const redditGuard = require("../publishers/social/redditGuard");
 
 // ── Arg parsing ──
 
@@ -84,8 +85,7 @@ async function publishOne(artifact, opts) {
     case "social_post": {
       const platform = artifact.target?.platform;
       if (platform === "reddit") {
-        console.log(`  [stub] Reddit publishing not routed through Zoho — not implemented`);
-        return { status: "not-implemented" };
+        return await redditGuard.publish(artifact, { dryRun: opts.dryRun });
       }
       // Live posts (status=published) go through direct adapters
       if (artifact.status === "published") {
@@ -200,13 +200,17 @@ async function main() {
     // Publish
     try {
       const res = await publishOne(artifact, opts);
-      const detail =
-        res.status === "not-implemented"
-          ? "stub — not implemented"
-          : res.status === "dry-run"
-            ? `dry-run ok`
-            : res.url || res.link || res.status;
-      results.push({ id, type, ok: true, detail });
+      if (res.status === "BLOCKED") {
+        results.push({ id, type, ok: false, detail: `BLOCKED: ${res.reasons[0]}` });
+      } else {
+        const detail =
+          res.status === "not-implemented"
+            ? "stub — not implemented"
+            : res.status === "dry-run"
+              ? `dry-run ok`
+              : res.url || res.link || res.status;
+        results.push({ id, type, ok: true, detail });
+      }
     } catch (err) {
       console.log(`   Error: ${err.message}`);
       results.push({ id, type, ok: false, detail: err.message });

@@ -17,7 +17,8 @@
     "start:all": "node scripts/start-all.js",
     "publish": "node scripts/publish.js",
     "check:env": "node scripts/check-env.js",
-    "test": "node --test 'marketing-artifacts/__tests__/*.test.js'"
+    "test": "node --test 'marketing-artifacts/__tests__/*.test.js'",
+    "start:portal": "cd apps/portal && npm run dev"
   },
   "keywords": [],
   "author": "",

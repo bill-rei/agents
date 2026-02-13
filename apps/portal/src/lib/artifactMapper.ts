@@ -55,12 +55,16 @@ function buildTarget(
   siteKey: string
 ): Record<string, unknown> {
   switch (type) {
-    case "web_page":
+    case "web_page": {
+      // page_key is a portal-only field used for --page flag; strip it
+      // so it doesn't fail schema validation (additionalProperties: false)
+      const { page_key: _, ...rest } = dbTarget;
       return {
         platform: "wordpress",
         site_key: siteKey,
-        ...dbTarget, // user overrides (slug, page_id, elementor)
+        ...rest, // user overrides (slug, page_id, elementor)
       };
+    }
     case "social_post":
       return {
         platform: dbTarget.platform || "x",

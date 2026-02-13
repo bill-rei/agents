@@ -45,10 +45,12 @@ function resolveSiteConfig(siteKey) {
   const baseUrl = url.replace(/\/$/, "");
 
   // Safety: never touch production
-  if (!baseUrl.includes("staging")) {
+  // Accept "staging" anywhere in URL, or "stg-" / "stg." as common prefixes
+  const looksLikeStaging = /staging|stg[-.]/.test(baseUrl);
+  if (!looksLikeStaging) {
     throw new Error(
-      `Refusing to publish: URL for "${siteKey}" does not contain "staging" (${baseUrl}). ` +
-      "This adapter only targets staging environments."
+      `Refusing to publish: URL for "${siteKey}" does not look like a staging site (${baseUrl}). ` +
+      'Expected "staging", "stg-", or "stg." in the URL. This adapter only targets staging environments.'
     );
   }
 

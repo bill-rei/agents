@@ -40,9 +40,14 @@ export async function POST(
     const marketingArtifact = mapToMarketingArtifact(artifact);
     const siteKey = artifact.run.project.targetRegistryKey;
 
+    // Extract page_key from target if present — the CLI resolves it to a slug
+    const target = (artifact.target as Record<string, unknown>) || {};
+    const pageKey = target.page_key as string | undefined;
+
     const publishResult = await publishViaCli(marketingArtifact, {
       dryRun,
       siteKey,
+      pageKey,
     });
 
     const log = await db.publishLog.create({

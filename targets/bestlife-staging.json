@@ -3,12 +3,16 @@
   "label": "Best Life – Staging",
   "environment": "staging",
   "base_url_env": "WP_BESTLIFE_STAGING_URL",
+  "aliases": {
+    "home": "homepage",
+    "index": "homepage"
+  },
   "pages": {
-    "home": { "slug": "home", "title": "Homepage" },
-    "about": { "slug": "about-us", "title": "About Us" },
-    "articles": { "slug": "articles", "title": "Articles Index" },
-    "contact": { "slug": "contact", "title": "Contact" },
-    "wellness": { "slug": "wellness-hub", "title": "Wellness Hub" },
-    "subscribe": { "slug": "subscribe", "title": "Subscribe" }
+    "homepage": { "slug": "bestlife-homepage-agent-draft", "title": "Homepage" },
+    "about": { "slug": "bestlife-about-agent-draft", "title": "About Us" },
+    "articles": { "slug": "bestlife-articles-agent-draft", "title": "Articles Index" },
+    "contact": { "slug": "bestlife-contact-agent-draft", "title": "Contact" },
+    "wellness": { "slug": "bestlife-wellness-agent-draft", "title": "Wellness Hub" },
+    "subscribe": { "slug": "bestlife-subscribe-agent-draft", "title": "Subscribe" }
   }
 }

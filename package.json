@@ -18,6 +18,7 @@
     "publish": "node scripts/publish.js",
     "check:env": "node scripts/check-env.js",
     "test": "node --test 'marketing-artifacts/__tests__/*.test.js'",
+    "publish:dry": "node scripts/publish.js --file examples/artifacts/web/bestlife-homepage-markdown.json --site bestlife-staging --page homepage --dry-run",
     "start:portal": "cd apps/portal && npm run dev"
   },
   "keywords": [],
@@ -26,14 +27,15 @@
   "type": "commonjs",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "cheerio": "^1.2.0",
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
     "mammoth": "^1.4.20",
+    "marked": "^17.0.2",
     "multer": "^1.4.5-lts.1",
     "openai": "^6.18.0",
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
     "pdf-parse": "^1.1.1"
   }
 }

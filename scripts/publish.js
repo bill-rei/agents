@@ -9,13 +9,13 @@ const zohoAdapter = require("../publishers/social/zohoSocial");
 const xDirectAdapter = require("../publishers/social/xDirect");
 const linkedinDirectAdapter = require("../publishers/social/linkedinDirect");
 const redditGuard = require("../publishers/social/redditGuard");
-const { loadRegistry, resolvePageSlug, listSiteKeys, listPageKeys } = require("../lib/targetRegistry");
+const { loadRegistry, resolvePageSlug, normalizePageKey, listSiteKeys, listPageKeys } = require("../lib/targetRegistry");
 
 // ── Arg parsing ──
 
 function parseArgs(argv) {
   const args = argv.slice(2);
-  const opts = { file: null, dryRun: false, apply: false, forceLive: false, only: null, site: null, page: null };
+  const opts = { file: null, dryRun: false, apply: false, forceLive: false, updateTitle: false, only: null, site: null, page: null };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -30,6 +30,9 @@ function parseArgs(argv) {
         break;
       case "--force-live":
         opts.forceLive = true;
+        break;
+      case "--update-title":
+        opts.updateTitle = true;
         break;
       case "--only":
         opts.only = parseFilter(args[++i]);
@@ -70,8 +73,9 @@ function usage() {
   console.log("  --apply                    Actually publish to staging");
   console.log("  --only key=value           Filter artifacts (e.g. --only site_key=llif-staging)");
   console.log("  --force-live               Allow live posting for status=published artifacts");
+  console.log("  --update-title             Allow overwriting the WP page title");
   console.log("  --site <site_key>          Target site from registry (e.g. llif-staging)");
-  console.log("  --page <page_key>          Page key from registry (e.g. home, about)");
+  console.log("  --page <page_key>          Page key or alias from registry (e.g. homepage, home)");
   console.log("");
   console.log("Available sites:");
   try {
@@ -102,7 +106,7 @@ function matchesFilter(artifact, filter) {
 async function publishOne(artifact, opts) {
   switch (artifact.artifact_type) {
     case "web_page":
-      return await wpAdapter.publish(artifact, { dryRun: opts.dryRun });
+      return await wpAdapter.publish(artifact, { dryRun: opts.dryRun, updateTitle: opts.updateTitle });
     case "social_post": {
       const platform = artifact.target?.platform;
       if (platform === "reddit") {
@@ -194,6 +198,12 @@ async function main() {
     }
     console.log(`Registry: ${reg.label} (${opts.site})`);
     if (opts.page) {
+      // Normalize alias before resolving
+      const canonical = normalizePageKey(opts.site, opts.page);
+      if (canonical !== opts.page) {
+        console.log(`Page alias: "${opts.page}" → "${canonical}"`);
+      }
+      opts.page = canonical;
       const pageInfo = resolvePageSlug(opts.site, opts.page);
       console.log(`Page: ${opts.page} → slug "${pageInfo.slug}"${pageInfo.page_id ? ` (id: ${pageInfo.page_id})` : ""}`);
     }

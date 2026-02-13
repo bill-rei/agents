@@ -4,6 +4,7 @@ require("dotenv").config({ path: require("path").join(__dirname, "..", "..", ".e
 const fs = require("fs");
 const path = require("path");
 const { validateArtifact } = require("../../marketing-artifacts");
+const { ensureHtml } = require("../../lib/markdownToHtml");
 
 const LOG_PATH = path.join(__dirname, "..", "..", "publish-log.jsonl");
 
@@ -67,7 +68,7 @@ function appendLog(entry) {
 // ── Main publish function ──
 
 async function publish(artifact, opts = {}) {
-  const { dryRun = false } = opts;
+  const { dryRun = false, updateTitle = false } = opts;
 
   // 1. Validate
   if (!artifact || artifact.artifact_type !== "web_page") {
@@ -102,23 +103,32 @@ async function publish(artifact, opts = {}) {
     }
   }
 
-  // 4. Build WP payload
-  const wpPayload = {
-    content: content.html,
-    status: content.status || "draft",
-  };
-  if (content.title) {
-    wpPayload.title = content.title;
+  // 4. Convert markdown → HTML if needed
+  const { html: resolvedHtml, converted } = ensureHtml(content.html);
+  if (converted) {
+    console.log(`  [md→html] Converted markdown content to HTML`);
   }
 
-  // 5. Dry-run: print and return
+  // 5. Build WP payload
+  const wpPayload = {
+    content: resolvedHtml,
+    status: content.status || "draft",
+  };
+  // Only overwrite the page title when --update-title is explicitly passed
+  if (content.title && updateTitle) {
+    wpPayload.title = content.title;
+  } else if (content.title && !updateTitle) {
+    console.log(`  [title] Skipping title update (use --update-title to overwrite). Title: "${content.title}"`);
+  }
+
+  // 6. Dry-run: print and return
   if (dryRun) {
     console.log(`[dry-run] Would update page ${pageId} on ${site.baseUrl}`);
     console.log(`[dry-run] Payload:`, JSON.stringify(wpPayload, null, 2));
     return { pageId, link: null, status: "dry-run" };
   }
 
-  // 6. Push to WP
+  // 7. Push to WP
   const updateUrl = `${site.baseUrl}/wp-json/wp/v2/pages/${pageId}`;
   const res = await fetch(updateUrl, {
     method: "POST",
@@ -137,7 +147,7 @@ async function publish(artifact, opts = {}) {
     throw new Error(`WP update failed (${res.status}): ${msg}`);
   }
 
-  // 7. Log
+  // 8. Log
   appendLog({
     artifact_id: artifact.artifact_id,
     site_key: target.site_key,

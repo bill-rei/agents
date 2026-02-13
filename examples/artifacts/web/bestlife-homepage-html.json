@@ -1,0 +1,20 @@
+{
+  "artifact_id": "bestlife-home-html-001",
+  "brand": "bestlife",
+  "artifact_type": "web_page",
+  "target": {
+    "platform": "wordpress",
+    "site_key": "bestlife-staging",
+    "slug": "bestlife-homepage-agent-draft"
+  },
+  "content": {
+    "title": "Best Life – Live Your Best Life Every Day",
+    "html": "<section class=\"hero\">\n  <h2>Welcome to Best Life</h2>\n  <p>Your journey to <strong>wellness</strong>, <strong>longevity</strong>, and <strong>fulfillment</strong> starts here.</p>\n</section>\n<section class=\"offerings\">\n  <h3>What We Offer</h3>\n  <ul>\n    <li>Expert wellness guidance</li>\n    <li>Science-backed longevity tips</li>\n    <li>Community support and events</li>\n  </ul>\n  <blockquote>The best time to start living your best life is now.</blockquote>\n  <p><a href=\"/about\">Learn more about our programs</a></p>\n</section>"
+  },
+  "status": "draft",
+  "provenance": {
+    "agent": "website-messaging-architect",
+    "created_at": "2025-01-15T10:00:00Z"
+  },
+  "human_approval": false
+}

@@ -1,0 +1,20 @@
+{
+  "artifact_id": "bestlife-home-md-001",
+  "brand": "bestlife",
+  "artifact_type": "web_page",
+  "target": {
+    "platform": "wordpress",
+    "site_key": "bestlife-staging",
+    "slug": "bestlife-homepage-agent-draft"
+  },
+  "content": {
+    "title": "Best Life – Live Your Best Life Every Day",
+    "html": "## Welcome to Best Life\n\nYour journey to **wellness**, **longevity**, and **fulfillment** starts here.\n\n### What We Offer\n\n- Expert wellness guidance\n- Science-backed longevity tips\n- Community support and events\n\n> \"The best time to start living your best life is now.\"\n\n[Learn more about our programs](/about)"
+  },
+  "status": "draft",
+  "provenance": {
+    "agent": "website-messaging-architect",
+    "created_at": "2025-01-15T10:00:00Z"
+  },
+  "human_approval": false
+}

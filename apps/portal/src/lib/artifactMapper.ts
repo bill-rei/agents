@@ -1,7 +1,11 @@
-import type { Artifact, Run, Project } from "@prisma/client";
+import type { Artifact, Run, Project, Asset, ArtifactAsset } from "@prisma/client";
+import { getFilePath } from "@/lib/storage";
+
+type ArtifactAssetWithAsset = ArtifactAsset & { asset: Asset };
 
 type ArtifactWithRun = Artifact & {
   run: Run & { project: Project };
+  artifactAssets?: ArtifactAssetWithAsset[];
 };
 
 /**
@@ -33,7 +37,7 @@ export function mapToMarketingArtifact(dbArtifact: ArtifactWithRun) {
   // Build type-specific content with required fields
   const content = buildContent(dbArtifact.type, contentObj, dbArtifact.title);
 
-  return {
+  const base = {
     artifact_id: dbArtifact.id,
     brand: (metadata.brand as string) || dbArtifact.run.project.slug,
     artifact_type: dbArtifact.type,
@@ -47,6 +51,19 @@ export function mapToMarketingArtifact(dbArtifact: ArtifactWithRun) {
     human_approval: dbArtifact.status === "approved",
     ...(metadata.schedule_at ? { schedule_at: metadata.schedule_at } : {}),
   };
+
+  // Attach media payload if assets are linked
+  const artifactAssets = dbArtifact.artifactAssets || [];
+  if (artifactAssets.length > 0) {
+    const mediaPayload = buildMediaPayload(artifactAssets, content);
+    return {
+      ...base,
+      ...mediaPayload,
+      content_format: "html",
+    };
+  }
+
+  return base;
 }
 
 function buildTarget(
@@ -108,6 +125,50 @@ function buildContent(
     default:
       return contentObj;
   }
+}
+
+// ── Media payload builder ──
+
+function slugify(filename: string): string {
+  const name = filename.replace(/\.[^.]+$/, "");
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function buildMediaPayload(
+  artifactAssets: ArtifactAssetWithAsset[],
+  content: Record<string, unknown>
+) {
+  const media_assets = artifactAssets.map((aa) => ({
+    asset_id: aa.assetId,
+    source: "upload" as const,
+    upload_path: getFilePath(aa.asset.storagePath),
+    intent: aa.intent,
+    seo: {
+      alt: aa.alt || aa.asset.filename,
+      filename_slug: slugify(aa.asset.filename),
+      ...(aa.caption ? { caption: aa.caption } : {}),
+    },
+    geo: {
+      llm_description: aa.asset.description || aa.alt || aa.asset.filename,
+    },
+  }));
+
+  const media_bindings = artifactAssets.map((aa) => ({
+    asset_id: aa.assetId,
+    placement: aa.placement as "above" | "below" | "inline",
+    ...(aa.alignment ? { alignment: aa.alignment } : {}),
+    ...(aa.size ? { size: aa.size } : {}),
+  }));
+
+  const content_blocks = [
+    {
+      block_id: "main",
+      html: String(content.html || content.body || ""),
+      media_bindings,
+    },
+  ];
+
+  return { media_assets, content_blocks };
 }
 
 export function deriveDestination(dbArtifact: ArtifactWithRun): string {

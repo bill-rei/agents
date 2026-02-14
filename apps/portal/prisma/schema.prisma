@@ -106,9 +106,12 @@ model Asset {
   createdByUserId String   @map("created_by_user_id")
   createdAt       DateTime @default(now()) @map("created_at")
 
+  description     String?
+
   run             Run      @relation(fields: [runId], references: [id])
   project         Project  @relation(fields: [projectId], references: [id])
   createdBy       User     @relation(fields: [createdByUserId], references: [id])
+  artifactAssets  ArtifactAsset[]
 
   @@index([runId])
   @@map("assets")
@@ -126,9 +129,10 @@ model Artifact {
   createdAt DateTime       @default(now()) @map("created_at")
   updatedAt DateTime       @updatedAt     @map("updated_at")
 
-  run         Run          @relation(fields: [runId], references: [id])
-  approvals   Approval[]
-  publishLogs PublishLog[]
+  run             Run          @relation(fields: [runId], references: [id])
+  approvals       Approval[]
+  publishLogs     PublishLog[]
+  artifactAssets  ArtifactAsset[]
 
   @@index([runId])
   @@index([type])
@@ -162,4 +166,26 @@ model PublishLog {
 
   @@index([artifactId])
   @@map("publish_logs")
+}
+
+model ArtifactAsset {
+  id         String   @id @default(cuid())
+  artifactId String   @map("artifact_id")
+  assetId    String   @map("asset_id")
+  placement  String   @default("below")
+  alignment  String?
+  size       String?
+  intent     String   @default("section")
+  order      Int      @default(0)
+  alt        String   @default("")
+  caption    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  artifact   Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  asset      Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, artifactId])
+  @@index([artifactId])
+  @@index([assetId])
+  @@map("artifact_assets")
 }

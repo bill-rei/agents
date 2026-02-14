@@ -27,7 +27,10 @@ export async function POST(
       status: "approved",
       ...(artifactIds ? { id: { in: artifactIds } } : {}),
     },
-    include: { run: { include: { project: true } } },
+    include: {
+      run: { include: { project: true } },
+      artifactAssets: { include: { asset: true }, orderBy: { order: "asc" } },
+    },
   });
 
   if (artifacts.length === 0) {

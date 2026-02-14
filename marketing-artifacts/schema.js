@@ -105,6 +105,65 @@ const artifactSchema = {
     review_notes: { type: "string" },
     human_approval: { type: "boolean" },
     metadata: { type: "object" },
+    media_assets: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          asset_id: { type: "string", minLength: 1 },
+          source: { type: "string", enum: ["upload", "url", "cms"] },
+          url: { type: "string" },
+          upload_path: { type: "string" },
+          cms_media_id: { type: "integer" },
+          intent: { type: "string", enum: ["hero", "section", "inline", "og", "icon"] },
+          seo: {
+            type: "object",
+            properties: {
+              alt: { type: "string", minLength: 1 },
+              title: { type: "string" },
+              caption: { type: "string" },
+              filename_slug: { type: "string", minLength: 1 },
+            },
+            required: ["alt", "filename_slug"],
+          },
+          geo: {
+            type: "object",
+            properties: {
+              llm_description: { type: "string", minLength: 1 },
+              entities: { type: "array", items: { type: "string" } },
+              topics: { type: "array", items: { type: "string" } },
+            },
+            required: ["llm_description"],
+          },
+        },
+        required: ["asset_id", "source", "intent", "seo", "geo"],
+      },
+    },
+    content_blocks: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          block_id: { type: "string", minLength: 1 },
+          html: { type: "string" },
+          media_bindings: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                asset_id: { type: "string", minLength: 1 },
+                placement: { type: "string", enum: ["above", "below", "inline"] },
+                alignment: { type: "string", enum: ["left", "center", "right"] },
+                size: { type: "string", enum: ["full", "wide", "medium", "small"] },
+                link_to: { type: "string" },
+              },
+              required: ["asset_id", "placement"],
+            },
+          },
+        },
+        required: ["block_id", "html"],
+      },
+    },
   },
   required: [
     "artifact_id",

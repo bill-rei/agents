@@ -100,6 +100,7 @@ export interface TargetSummary {
   brand: string;
   environment: string;
   pageKeys?: string[];
+  pages?: Record<string, PageEntry>;
   channelKeys?: string[];
 }
 
@@ -115,7 +116,9 @@ export function listAllTargets(): TargetSummary[] {
       environment: reg.environment,
     };
     if (type === "web") {
-      base.pageKeys = Object.keys((reg as WebRegistry).pages || {});
+      const webReg = reg as WebRegistry;
+      base.pageKeys = Object.keys(webReg.pages || {});
+      base.pages = webReg.pages;
     } else {
       base.channelKeys = Object.keys((reg as SocialRegistry).channels || {});
     }

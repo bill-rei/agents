@@ -41,10 +41,52 @@ export async function POST(
   const results = [];
 
   for (const artifact of artifacts) {
-    const marketingArtifact = mapToMarketingArtifact(artifact);
     const siteKey = artifact.run.project.targetRegistryKey;
+    const metadata = (artifact.metadata as Record<string, unknown>) || {};
+    const brand = deriveBrand(siteKey, metadata);
 
-    // Extract page_key from target if present — the CLI resolves it to a slug
+    // Social posts go through the Zoho bulk CSV export, not the CLI
+    if (artifact.type === "social_post") {
+      const contentItemId = handleSocialPost(artifact, brand, dryRun);
+
+      await db.publishLog.create({
+        data: {
+          artifactId: artifact.id,
+          userId: user.id,
+          destination: `zoho-csv:${brand.toLowerCase()}`,
+          result: {
+            ok: true,
+            dryRun,
+            contentItemId: contentItemId || null,
+            note: dryRun
+              ? "Dry run — ContentItem not created"
+              : "ContentItem created for Zoho bulk CSV export",
+          },
+        },
+      });
+
+      if (!dryRun) {
+        await db.artifact.update({
+          where: { id: artifact.id },
+          data: { status: "published" },
+        });
+      }
+
+      results.push({
+        artifactId: artifact.id,
+        title: artifact.title,
+        ok: true,
+        dryRun,
+        stdout: dryRun
+          ? `[dry-run] Would create ContentItem for Zoho bulk CSV export (${brand})`
+          : `ContentItem created for Zoho bulk CSV export (${brand})`,
+        contentItemId,
+      });
+      continue;
+    }
+
+    // Web pages and other types go through the CLI
+    const marketingArtifact = mapToMarketingArtifact(artifact);
     const target = (artifact.target as Record<string, unknown>) || {};
     const pageKey = target.page_key as string | undefined;
 
@@ -78,8 +120,6 @@ export async function POST(
       });
 
       // Create a ContentItem record for Zoho export
-      const metadata = (artifact.metadata as Record<string, unknown>) || {};
-      const brand = deriveBrand(siteKey, metadata);
       const socialCaption = deriveSocialCaption(artifact);
       const canonicalUrl = extractCanonicalUrl(publishResult.stdout);
       const imageUrls = buildImageUrls(artifact.artifactAssets || []);
@@ -105,6 +145,30 @@ export async function POST(
   }
 
   return NextResponse.json({ results });
+}
+
+// ── Social post handler (Zoho bulk CSV path) ──
+
+function handleSocialPost(
+  artifact: {
+    title: string;
+    content: string;
+    artifactAssets?: Array<{ asset: { id: string; mimeType: string } }>;
+  },
+  brand: "LLIF" | "BestLife",
+  dryRun: boolean
+): string | undefined {
+  if (dryRun) return undefined;
+
+  const socialCaption = deriveSocialCaption(artifact);
+  const imageUrls = buildImageUrls(artifact.artifactAssets || []);
+
+  const contentItem = createContentItem({
+    brand,
+    socialCaption,
+    imageUrls,
+  });
+  return contentItem.id;
 }
 
 // ── Helpers for ContentItem creation ──

@@ -223,9 +223,10 @@ async function main() {
   const artifacts = Array.isArray(raw) ? raw : [raw];
   console.log(`Loaded ${artifacts.length} artifact(s) from ${opts.file}`);
 
-  // Apply --site / --page overrides from registry
+  // Apply --site / --page overrides from registry (only for web_page artifacts)
   if (opts.site || opts.page) {
     for (const artifact of artifacts) {
+      if (artifact.artifact_type !== "web_page") continue;
       if (!artifact.target) artifact.target = {};
       if (opts.site) {
         artifact.target.site_key = opts.site;

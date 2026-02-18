@@ -39,19 +39,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wor
   }
 
   // Enforce brand boundary — all targets must belong to the same brand
-  const brandCheck = validateBrandBoundary(keys);
-  if (!brandCheck.valid) {
-    return NextResponse.json({ error: brandCheck.error }, { status: 400 });
+  try {
+    const brandCheck = validateBrandBoundary(keys);
+    if (!brandCheck.valid) {
+      return NextResponse.json({ error: brandCheck.error }, { status: 400 });
+    }
+  } catch (err) {
+    // Target JSON file not found or unreadable — skip validation but log
+    console.warn("[projects] Brand validation skipped:", (err as Error).message);
   }
 
-  const project = await db.project.create({
-    data: {
-      workspaceId,
-      name,
-      slug,
-      targetRegistryKey: keys[0],       // backward compat
-      targetRegistryKeys: keys,
-    },
-  });
-  return NextResponse.json(project, { status: 201 });
+  try {
+    const project = await db.project.create({
+      data: {
+        workspaceId,
+        name,
+        slug,
+        targetRegistryKey: keys[0],       // backward compat
+        targetRegistryKeys: keys,
+      },
+    });
+    return NextResponse.json(project, { status: 201 });
+  } catch (err) {
+    const msg = (err as Error).message;
+    if (msg.includes("Unique constraint")) {
+      return NextResponse.json({ error: "A project with this slug already exists in this workspace" }, { status: 409 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

@@ -33,6 +33,7 @@ export default function ProjectsPage() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetch("/api/workspaces")
@@ -76,18 +77,25 @@ export default function ProjectsPage() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
+    setError("");
     if (!workspace || selectedKeys.length === 0) return;
-    const res = await fetch(`/api/workspaces/${workspace.id}/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, slug, targetRegistryKeys: selectedKeys }),
-    });
-    if (res.ok) {
-      const proj = await res.json();
-      setProjects([proj, ...projects]);
+    try {
+      const res = await fetch(`/api/workspaces/${workspace.id}/projects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, slug, targetRegistryKeys: selectedKeys }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || `Server error (${res.status})`);
+        return;
+      }
+      setProjects([data, ...projects]);
       setName("");
       setSlug("");
       setSelectedKeys([]);
+    } catch (err) {
+      setError(`Network error: ${(err as Error).message}`);
     }
   }
 
@@ -184,6 +192,10 @@ export default function ProjectsPage() {
             <p className="text-xs text-gray-400">Select at least one target. All targets must be the same brand.</p>
           )}
         </div>
+
+        {error && (
+          <p className="text-red-600 text-sm mb-3">{error}</p>
+        )}
 
         <button
           type="submit"

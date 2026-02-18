@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { mapToMarketingArtifact, deriveDestination } from "@/lib/artifactMapper";
 import { publishViaCli } from "@/lib/publishBridge";
 import { createContentItem } from "@/lib/contentItemStore";
+import { publishDesignLockedPage } from "@/lib/wp/publishDesignLockedPage";
 
 export async function POST(
   req: NextRequest,
@@ -83,6 +84,96 @@ export async function POST(
         contentItemId,
       });
       continue;
+    }
+
+    // Check if this artifact uses the design-locked structured format
+    const contentFormat = (artifact.metadata as Record<string, unknown>)?.content_format;
+    if (artifact.type === "web_page" && contentFormat === "structured") {
+      try {
+        const target = (artifact.target as Record<string, unknown>) || {};
+        const slug = (target.slug || target.page_key) as string;
+        if (!slug) {
+          results.push({
+            artifactId: artifact.id,
+            title: artifact.title,
+            ok: false,
+            dryRun,
+            stdout: "Design-locked publish requires a slug in artifact.target",
+          });
+          continue;
+        }
+
+        let structuredContent: unknown;
+        try {
+          structuredContent = JSON.parse(artifact.content);
+        } catch {
+          results.push({
+            artifactId: artifact.id,
+            title: artifact.title,
+            ok: false,
+            dryRun,
+            stdout: "Failed to parse artifact content as JSON for structured publish",
+          });
+          continue;
+        }
+
+        if (dryRun) {
+          results.push({
+            artifactId: artifact.id,
+            title: artifact.title,
+            ok: true,
+            dryRun: true,
+            stdout: `[dry-run] Would design-locked publish to slug "${slug}"`,
+          });
+          continue;
+        }
+
+        const dlResult = await publishDesignLockedPage({
+          slug,
+          title: artifact.title,
+          artifact: structuredContent,
+          status: "draft",
+        });
+
+        await db.publishLog.create({
+          data: {
+            artifactId: artifact.id,
+            userId: user.id,
+            destination: `wp-design-locked:${dlResult.brand}`,
+            result: {
+              ok: true,
+              pageId: dlResult.pageId,
+              url: dlResult.url,
+              templateId: dlResult.templateId,
+              usedAcf: dlResult.usedAcf,
+            },
+          },
+        });
+
+        await db.artifact.update({
+          where: { id: artifact.id },
+          data: { status: "published" },
+        });
+
+        results.push({
+          artifactId: artifact.id,
+          title: artifact.title,
+          ok: true,
+          dryRun: false,
+          stdout: `Design-locked published to ${dlResult.url} (template ${dlResult.templateId})`,
+        });
+        continue;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push({
+          artifactId: artifact.id,
+          title: artifact.title,
+          ok: false,
+          dryRun,
+          stdout: `Design-locked publish failed: ${msg}`,
+        });
+        continue;
+      }
     }
 
     // Web pages and other types go through the CLI

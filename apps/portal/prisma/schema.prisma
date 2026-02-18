@@ -34,6 +34,13 @@ enum ApprovalDecision {
   needs_changes
 }
 
+enum AgentExecStatus {
+  pending
+  running
+  completed
+  failed
+}
+
 model User {
   id           String     @id @default(cuid())
   email        String     @unique
@@ -42,10 +49,11 @@ model User {
   role         Role       @default(editor)
   createdAt    DateTime   @default(now()) @map("created_at")
 
-  runs         Run[]
-  approvals    Approval[]
-  publishLogs  PublishLog[]
-  assets       Asset[]
+  runs              Run[]
+  approvals         Approval[]
+  publishLogs       PublishLog[]
+  assets            Asset[]
+  agentExecutions   AgentExecution[]
 
   @@map("users")
 }
@@ -85,10 +93,11 @@ model Run {
   createdByUserId String    @map("created_by_user_id")
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  project         Project   @relation(fields: [projectId], references: [id])
-  createdBy       User      @relation(fields: [createdByUserId], references: [id])
-  artifacts       Artifact[]
-  assets          Asset[]
+  project           Project          @relation(fields: [projectId], references: [id])
+  createdBy         User             @relation(fields: [createdByUserId], references: [id])
+  artifacts         Artifact[]
+  assets            Asset[]
+  agentExecutions   AgentExecution[]
 
   @@index([projectId])
   @@map("runs")
@@ -188,4 +197,32 @@ model ArtifactAsset {
   @@index([artifactId])
   @@index([assetId])
   @@map("artifact_assets")
+}
+
+model AgentExecution {
+  id              String          @id @default(cuid())
+  runId           String          @map("run_id")
+  agentKey        String          @map("agent_key")
+  status          AgentExecStatus @default(pending)
+  inputs          Json            @default("{}")
+  inputFiles      Json            @default("[]")
+  output          String          @default("") @db.Text
+  outputMeta      Json            @default("{}")
+  error           String?         @db.Text
+  startedAt       DateTime?       @map("started_at")
+  completedAt     DateTime?       @map("completed_at")
+  durationMs      Int?            @map("duration_ms")
+  parentExecId    String?         @map("parent_exec_id")
+  createdByUserId String          @map("created_by_user_id")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  run          Run              @relation(fields: [runId], references: [id])
+  createdBy    User             @relation(fields: [createdByUserId], references: [id])
+  parentExec   AgentExecution?  @relation("ExecLineage", fields: [parentExecId], references: [id])
+  childExecs   AgentExecution[] @relation("ExecLineage")
+
+  @@index([runId])
+  @@index([agentKey])
+  @@index([parentExecId])
+  @@map("agent_executions")
 }

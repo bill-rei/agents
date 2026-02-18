@@ -18,6 +18,8 @@ export default function Nav({ user }: { user: { name: string; email: string } | 
         <Link href="/workspaces" className="font-bold text-lg">Marketing Ops</Link>
         <Link href="/workspaces" className="text-sm text-gray-600 hover:text-gray-900">Workspaces</Link>
         <Link href="/runs" className="text-sm text-gray-600 hover:text-gray-900">Runs</Link>
+        <Link href="/agents" className="text-sm text-gray-600 hover:text-gray-900">Agents</Link>
+        <Link href="/agents/pipeline" className="text-sm text-gray-600 hover:text-gray-900">Pipeline</Link>
       </div>
       {user && (
         <div className="flex items-center gap-3 text-sm">

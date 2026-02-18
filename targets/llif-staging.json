@@ -1,6 +1,8 @@
 {
   "site_key": "llif-staging",
-  "label": "LLIF – Staging",
+  "label": "LLIF – Web Staging",
+  "type": "web",
+  "brand": "llif",
   "environment": "staging",
   "base_url_env": "WP_LLIF_STAGING_URL",
   "pages": {

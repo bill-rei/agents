@@ -70,12 +70,13 @@ model Workspace {
 }
 
 model Project {
-  id                String    @id @default(cuid())
-  workspaceId       String    @map("workspace_id")
-  name              String
-  slug              String
-  targetRegistryKey String    @map("target_registry_key")
-  createdAt         DateTime  @default(now()) @map("created_at")
+  id                 String    @id @default(cuid())
+  workspaceId        String    @map("workspace_id")
+  name               String
+  slug               String
+  targetRegistryKey  String    @map("target_registry_key")
+  targetRegistryKeys String[]  @default([]) @map("target_registry_keys")
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   workspace         Workspace @relation(fields: [workspaceId], references: [id])
   runs              Run[]

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { listSitesWithPages } from "@/lib/targetRegistry";
+import { listAllTargets } from "@/lib/targetRegistry";
 
 export async function GET() {
   try {
@@ -9,8 +9,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const sites = listSitesWithPages();
-    return NextResponse.json(sites);
+    const targets = listAllTargets();
+    return NextResponse.json(targets);
   } catch (err) {
     return NextResponse.json(
       { error: `Failed to load target registry: ${(err as Error).message}` },

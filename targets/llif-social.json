@@ -1,0 +1,16 @@
+{
+  "site_key": "llif-social",
+  "label": "LLIF – Social Media",
+  "type": "social",
+  "brand": "llif",
+  "environment": "staging",
+  "channels": {
+    "facebook_page": { "label": "Facebook Page" },
+    "x_profile": { "label": "X (Twitter)" },
+    "linkedin_company_page": { "label": "LinkedIn Company Page" },
+    "instagram_profile": { "label": "Instagram" },
+    "youtube_channel": { "label": "YouTube" },
+    "google_business_profile": { "label": "Google Business Profile" },
+    "bluesky_profile": { "label": "Bluesky" }
+  }
+}

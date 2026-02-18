@@ -18,10 +18,10 @@ type ArtifactWithRun = Artifact & {
  *   - social_post: target.platform=<platform>,   content.{body}
  *   - blog_post:   target.platform=<platform>,   content.{title, markdown}
  */
-export function mapToMarketingArtifact(dbArtifact: ArtifactWithRun) {
+export function mapToMarketingArtifact(dbArtifact: ArtifactWithRun, overrideSiteKey?: string) {
   const metadata = (dbArtifact.metadata as Record<string, unknown>) || {};
   const dbTarget = (dbArtifact.target as Record<string, unknown>) || {};
-  const siteKey = dbArtifact.run.project.targetRegistryKey;
+  const siteKey = overrideSiteKey || dbArtifact.run.project.targetRegistryKey;
 
   // Parse stored content — could be JSON string or plain text
   let contentObj: Record<string, unknown>;
@@ -171,13 +171,13 @@ function buildMediaPayload(
   return { media_assets, content_blocks };
 }
 
-export function deriveDestination(dbArtifact: ArtifactWithRun): string {
+export function deriveDestination(dbArtifact: ArtifactWithRun, overrideSiteKey?: string): string {
   const target = (dbArtifact.target as Record<string, unknown>) || {};
   if (dbArtifact.type === "web_page") {
-    return `wp:${target.site_key || dbArtifact.run.project.targetRegistryKey}`;
+    return `wp:${overrideSiteKey || target.site_key || dbArtifact.run.project.targetRegistryKey}`;
   }
   if (dbArtifact.type === "social_post") {
-    return `social:${target.platform || "unknown"}`;
+    return `social:${overrideSiteKey || target.platform || "unknown"}`;
   }
   return dbArtifact.type;
 }

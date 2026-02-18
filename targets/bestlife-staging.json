@@ -1,6 +1,8 @@
 {
   "site_key": "bestlife-staging",
-  "label": "Best Life – Staging",
+  "label": "Best Life – Web Staging",
+  "type": "web",
+  "brand": "bestlife",
   "environment": "staging",
   "base_url_env": "WP_BESTLIFE_STAGING_URL",
   "aliases": {

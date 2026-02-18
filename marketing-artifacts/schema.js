@@ -2,7 +2,7 @@ const webPageTarget = {
   type: "object",
   properties: {
     platform: { type: "string", const: "wordpress" },
-    site_key: { type: "string", enum: ["llif-staging", "bestlife-staging"] },
+    site_key: { type: "string", minLength: 1 },
     slug: { type: "string", minLength: 1 },
     page_id: { type: "integer", minimum: 1 },
     elementor: { type: "boolean" },

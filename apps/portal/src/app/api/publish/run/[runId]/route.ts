@@ -5,6 +5,8 @@ import { mapToMarketingArtifact, deriveDestination } from "@/lib/artifactMapper"
 import { publishViaCli } from "@/lib/publishBridge";
 import { createContentItem } from "@/lib/contentItemStore";
 import { publishDesignLockedPage } from "@/lib/wp/publishDesignLockedPage";
+import { getTargetsForArtifactType, getTargetType, deriveBrandFromTarget } from "@/lib/targetRegistry";
+import type { TargetRegistry } from "@/lib/targetRegistry";
 
 export async function POST(
   req: NextRequest,
@@ -39,218 +41,126 @@ export async function POST(
     return NextResponse.json({ error: "No approved artifacts to publish" }, { status: 400 });
   }
 
-  const results = [];
+  const results: Record<string, unknown>[] = [];
 
   for (const artifact of artifacts) {
-    const siteKey = artifact.run.project.targetRegistryKey;
+    const project = artifact.run.project;
     const metadata = (artifact.metadata as Record<string, unknown>) || {};
-    const brand = deriveBrand(siteKey, metadata);
 
-    // Social posts go through the Zoho bulk CSV export, not the CLI
-    if (artifact.type === "social_post") {
-      const contentItemId = handleSocialPost(artifact, brand, dryRun);
+    // Resolve target keys — prefer new array field, fall back to legacy single key
+    const targetKeys = project.targetRegistryKeys.length > 0
+      ? project.targetRegistryKeys
+      : [project.targetRegistryKey];
 
-      await db.publishLog.create({
-        data: {
-          artifactId: artifact.id,
-          userId: user.id,
-          destination: `zoho-csv:${brand.toLowerCase()}`,
-          result: {
-            ok: true,
-            dryRun,
-            contentItemId: contentItemId || null,
-            note: dryRun
-              ? "Dry run — ContentItem not created"
-              : "ContentItem created for Zoho bulk CSV export",
-          },
-        },
-      });
+    // Filter targets relevant to this artifact type
+    let relevantTargets: TargetRegistry[];
+    try {
+      relevantTargets = getTargetsForArtifactType(targetKeys, artifact.type);
+    } catch {
+      // If target JSON files not found, fall back to legacy single-key behavior
+      relevantTargets = [];
+    }
 
-      if (!dryRun) {
-        await db.artifact.update({
-          where: { id: artifact.id },
-          data: { status: "published" },
-        });
+    // Fallback: if no typed targets resolved, use the legacy single-key path
+    if (relevantTargets.length === 0) {
+      const siteKey = project.targetRegistryKey;
+      const brand = deriveBrand(siteKey, metadata);
+
+      if (artifact.type === "social_post") {
+        const result = await publishSocialPost(artifact, brand, dryRun, user.id);
+        results.push(result);
+      } else {
+        const result = await publishWebArtifact(artifact, siteKey, brand, metadata, dryRun, user.id);
+        results.push(result);
       }
-
-      results.push({
-        artifactId: artifact.id,
-        title: artifact.title,
-        ok: true,
-        dryRun,
-        stdout: dryRun
-          ? `[dry-run] Would create ContentItem for Zoho bulk CSV export (${brand})`
-          : `ContentItem created for Zoho bulk CSV export (${brand})`,
-        contentItemId,
-      });
       continue;
     }
 
-    // Check if this artifact uses the design-locked structured format
-    const contentFormat = (artifact.metadata as Record<string, unknown>)?.content_format;
-    if (artifact.type === "web_page" && contentFormat === "structured") {
-      try {
-        const target = (artifact.target as Record<string, unknown>) || {};
-        const slug = (target.slug || target.page_key) as string;
-        if (!slug) {
-          results.push({
-            artifactId: artifact.id,
-            title: artifact.title,
-            ok: false,
-            dryRun,
-            stdout: "Design-locked publish requires a slug in artifact.target",
-          });
-          continue;
-        }
+    // Fan-out: publish to each relevant target
+    let allOk = true;
 
-        let structuredContent: unknown;
-        try {
-          structuredContent = JSON.parse(artifact.content);
-        } catch {
-          results.push({
-            artifactId: artifact.id,
-            title: artifact.title,
-            ok: false,
-            dryRun,
-            stdout: "Failed to parse artifact content as JSON for structured publish",
-          });
-          continue;
-        }
+    for (const target of relevantTargets) {
+      const targetType = getTargetType(target);
+      const brand = deriveBrandForDisplay(deriveBrandFromTarget(target));
 
-        if (dryRun) {
-          results.push({
-            artifactId: artifact.id,
-            title: artifact.title,
-            ok: true,
-            dryRun: true,
-            stdout: `[dry-run] Would design-locked publish to slug "${slug}"`,
-          });
-          continue;
-        }
-
-        const dlResult = await publishDesignLockedPage({
-          slug,
-          title: artifact.title,
-          artifact: structuredContent,
-          status: "draft",
-        });
-
-        await db.publishLog.create({
-          data: {
-            artifactId: artifact.id,
-            userId: user.id,
-            destination: `wp-design-locked:${dlResult.brand}`,
-            result: {
-              ok: true,
-              pageId: dlResult.pageId,
-              url: dlResult.url,
-              templateId: dlResult.templateId,
-              usedAcf: dlResult.usedAcf,
-            },
-          },
-        });
-
-        await db.artifact.update({
-          where: { id: artifact.id },
-          data: { status: "published" },
-        });
-
-        results.push({
-          artifactId: artifact.id,
-          title: artifact.title,
-          ok: true,
-          dryRun: false,
-          stdout: `Design-locked published to ${dlResult.url} (template ${dlResult.templateId})`,
-        });
-        continue;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        results.push({
-          artifactId: artifact.id,
-          title: artifact.title,
-          ok: false,
-          dryRun,
-          stdout: `Design-locked publish failed: ${msg}`,
-        });
-        continue;
+      if (artifact.type === "social_post" && targetType === "social") {
+        const result = await publishSocialPost(artifact, brand, dryRun, user.id, target.site_key);
+        if (!result.ok) allOk = false;
+        results.push(result);
+      } else if (targetType === "web") {
+        const result = await publishWebArtifact(
+          artifact, target.site_key, brand, metadata, dryRun, user.id
+        );
+        if (!result.ok) allOk = false;
+        results.push(result);
       }
     }
 
-    // Web pages and other types go through the CLI
-    const marketingArtifact = mapToMarketingArtifact(artifact);
-    const target = (artifact.target as Record<string, unknown>) || {};
-    const pageKey = target.page_key as string | undefined;
-
-    const publishResult = await publishViaCli(marketingArtifact, {
-      dryRun,
-      siteKey,
-      pageKey,
-    });
-
-    const log = await db.publishLog.create({
-      data: {
-        artifactId: artifact.id,
-        userId: user.id,
-        destination: deriveDestination(artifact),
-        result: {
-          ok: publishResult.ok,
-          stdout: publishResult.stdout,
-          stderr: publishResult.stderr,
-          exitCode: publishResult.exitCode,
-          dryRun,
-        },
-      },
-    });
-
-    let contentItemId: string | undefined;
-
-    if (!dryRun && publishResult.ok) {
+    // Only mark artifact as published if all targets succeeded and not dry-run
+    if (!dryRun && allOk) {
       await db.artifact.update({
         where: { id: artifact.id },
         data: { status: "published" },
       });
-
-      // Create a ContentItem record for Zoho export
-      const socialCaption = deriveSocialCaption(artifact);
-      const canonicalUrl = extractCanonicalUrl(publishResult.stdout);
-      const imageUrls = buildImageUrls(artifact.artifactAssets || []);
-
-      const contentItem = createContentItem({
-        brand,
-        socialCaption,
-        canonicalUrl,
-        imageUrls,
-      });
-      contentItemId = contentItem.id;
     }
-
-    results.push({
-      artifactId: artifact.id,
-      title: artifact.title,
-      ok: publishResult.ok,
-      dryRun,
-      stdout: publishResult.stdout,
-      logId: log.id,
-      contentItemId,
-    });
   }
 
   return NextResponse.json({ results });
 }
 
-// ── Social post handler (Zoho bulk CSV path) ──
+// ── Social post publishing (Zoho bulk CSV path) ──
 
-function handleSocialPost(
+async function publishSocialPost(
+  artifact: {
+    id: string;
+    title: string;
+    content: string;
+    artifactAssets?: Array<{ asset: { id: string; mimeType: string } }> | null;
+  },
+  brand: "LLIF" | "BestLife",
+  dryRun: boolean,
+  userId: string,
+  targetSiteKey?: string,
+): Promise<Record<string, unknown>> {
+  const contentItemId = dryRun ? undefined : createSocialContentItem(artifact, brand);
+
+  await db.publishLog.create({
+    data: {
+      artifactId: artifact.id,
+      userId,
+      destination: `zoho-csv:${targetSiteKey || brand.toLowerCase()}`,
+      result: {
+        ok: true,
+        dryRun,
+        contentItemId: contentItemId || null,
+        note: dryRun
+          ? "Dry run — ContentItem not created"
+          : "ContentItem created for Zoho bulk CSV export",
+      },
+    },
+  });
+
+  return {
+    artifactId: artifact.id,
+    title: artifact.title,
+    ok: true,
+    dryRun,
+    target: targetSiteKey || `zoho-csv:${brand.toLowerCase()}`,
+    stdout: dryRun
+      ? `[dry-run] Would create ContentItem for Zoho bulk CSV export (${brand})`
+      : `ContentItem created for Zoho bulk CSV export (${brand})`,
+    contentItemId,
+  };
+}
+
+function createSocialContentItem(
   artifact: {
     title: string;
     content: string;
-    artifactAssets?: Array<{ asset: { id: string; mimeType: string } }>;
+    artifactAssets?: Array<{ asset: { id: string; mimeType: string } }> | null;
   },
-  brand: "LLIF" | "BestLife",
-  dryRun: boolean
-): string | undefined {
-  if (dryRun) return undefined;
-
+  brand: "LLIF" | "BestLife"
+): string {
   const socialCaption = deriveSocialCaption(artifact);
   const imageUrls = buildImageUrls(artifact.artifactAssets || []);
 
@@ -262,7 +172,182 @@ function handleSocialPost(
   return contentItem.id;
 }
 
-// ── Helpers for ContentItem creation ──
+// ── Web artifact publishing ──
+
+async function publishWebArtifact(
+  artifact: {
+    id: string;
+    title: string;
+    content: string;
+    type: string;
+    status: string;
+    metadata: unknown;
+    target: unknown;
+    createdAt: Date;
+    run: { project: { targetRegistryKey: string; slug: string } };
+    artifactAssets?: Array<{
+      asset: { id: string; mimeType: string; filename: string; storagePath: string; description: string | null };
+      assetId: string;
+      intent: string;
+      alt: string | null;
+      caption: string | null;
+      placement: string;
+      alignment: string | null;
+      size: string | null;
+    }> | null;
+  },
+  siteKey: string,
+  brand: "LLIF" | "BestLife",
+  metadata: Record<string, unknown>,
+  dryRun: boolean,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  // Check if this artifact uses the design-locked structured format
+  const contentFormat = metadata.content_format;
+  if (artifact.type === "web_page" && contentFormat === "structured") {
+    return publishDesignLocked(artifact, dryRun, userId);
+  }
+
+  // Standard web/blog publish via CLI
+  const marketingArtifact = mapToMarketingArtifact(artifact as Parameters<typeof mapToMarketingArtifact>[0], siteKey);
+  const target = (artifact.target as Record<string, unknown>) || {};
+  const pageKey = target.page_key as string | undefined;
+
+  const publishResult = await publishViaCli(marketingArtifact, {
+    dryRun,
+    siteKey,
+    pageKey,
+  });
+
+  const log = await db.publishLog.create({
+    data: {
+      artifactId: artifact.id,
+      userId,
+      destination: deriveDestination(artifact as Parameters<typeof deriveDestination>[0], siteKey),
+      result: {
+        ok: publishResult.ok,
+        stdout: publishResult.stdout,
+        stderr: publishResult.stderr,
+        exitCode: publishResult.exitCode,
+        dryRun,
+      },
+    },
+  });
+
+  let contentItemId: string | undefined;
+
+  if (!dryRun && publishResult.ok) {
+    // Create a ContentItem record for Zoho export
+    const socialCaption = deriveSocialCaption(artifact);
+    const canonicalUrl = extractCanonicalUrl(publishResult.stdout);
+    const imageUrls = buildImageUrls(artifact.artifactAssets || []);
+
+    const contentItem = createContentItem({
+      brand,
+      socialCaption,
+      canonicalUrl,
+      imageUrls,
+    });
+    contentItemId = contentItem.id;
+  }
+
+  return {
+    artifactId: artifact.id,
+    title: artifact.title,
+    ok: publishResult.ok,
+    dryRun,
+    target: siteKey,
+    stdout: publishResult.stdout,
+    logId: log.id,
+    contentItemId,
+  };
+}
+
+// ── Design-locked structured publish ──
+
+async function publishDesignLocked(
+  artifact: { id: string; title: string; content: string; target: unknown },
+  dryRun: boolean,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const target = (artifact.target as Record<string, unknown>) || {};
+    const slug = (target.slug || target.page_key) as string;
+    if (!slug) {
+      return {
+        artifactId: artifact.id,
+        title: artifact.title,
+        ok: false,
+        dryRun,
+        stdout: "Design-locked publish requires a slug in artifact.target",
+      };
+    }
+
+    let structuredContent: unknown;
+    try {
+      structuredContent = JSON.parse(artifact.content);
+    } catch {
+      return {
+        artifactId: artifact.id,
+        title: artifact.title,
+        ok: false,
+        dryRun,
+        stdout: "Failed to parse artifact content as JSON for structured publish",
+      };
+    }
+
+    if (dryRun) {
+      return {
+        artifactId: artifact.id,
+        title: artifact.title,
+        ok: true,
+        dryRun: true,
+        stdout: `[dry-run] Would design-locked publish to slug "${slug}"`,
+      };
+    }
+
+    const dlResult = await publishDesignLockedPage({
+      slug,
+      title: artifact.title,
+      artifact: structuredContent,
+      status: "draft",
+    });
+
+    await db.publishLog.create({
+      data: {
+        artifactId: artifact.id,
+        userId,
+        destination: `wp-design-locked:${dlResult.brand}`,
+        result: {
+          ok: true,
+          pageId: dlResult.pageId,
+          url: dlResult.url,
+          templateId: dlResult.templateId,
+          usedAcf: dlResult.usedAcf,
+        },
+      },
+    });
+
+    return {
+      artifactId: artifact.id,
+      title: artifact.title,
+      ok: true,
+      dryRun: false,
+      stdout: `Design-locked published to ${dlResult.url} (template ${dlResult.templateId})`,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      artifactId: artifact.id,
+      title: artifact.title,
+      ok: false,
+      dryRun,
+      stdout: `Design-locked publish failed: ${msg}`,
+    };
+  }
+}
+
+// ── Helpers ──
 
 function deriveBrand(
   siteKey: string,
@@ -272,6 +357,10 @@ function deriveBrand(
     return String(metadata.brand).toLowerCase() === "llif" ? "LLIF" : "BestLife";
   }
   return siteKey.startsWith("llif") ? "LLIF" : "BestLife";
+}
+
+function deriveBrandForDisplay(brand: string): "LLIF" | "BestLife" {
+  return brand.toLowerCase() === "llif" ? "LLIF" : "BestLife";
 }
 
 function deriveSocialCaption(artifact: {
@@ -284,15 +373,12 @@ function deriveSocialCaption(artifact: {
   } catch {
     contentObj = {};
   }
-  // Prefer body (social), then excerpt, then title
   return String(
     contentObj.body || contentObj.excerpt || artifact.title || ""
   );
 }
 
 function extractCanonicalUrl(stdout: string): string | undefined {
-  // The WP adapter prints the page link in stdout, e.g.:
-  //   Published page 123 on llif-staging -> https://staging.example.com/page/
   const match = stdout.match(/-> (https?:\/\/\S+)/);
   return match?.[1];
 }
@@ -300,9 +386,9 @@ function extractCanonicalUrl(stdout: string): string | undefined {
 const PORTAL_PUBLIC_URL = process.env.PORTAL_PUBLIC_URL || "";
 
 function buildImageUrls(
-  artifactAssets: Array<{ asset: { id: string; mimeType: string } }>
+  artifactAssets: Array<{ asset: { id: string; mimeType: string } }> | null
 ): string[] {
-  if (!PORTAL_PUBLIC_URL) return [];
+  if (!PORTAL_PUBLIC_URL || !artifactAssets) return [];
   return artifactAssets
     .filter((aa) => aa.asset.mimeType.startsWith("image/"))
     .map((aa) => `${PORTAL_PUBLIC_URL}/api/assets/${aa.asset.id}`);

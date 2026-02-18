@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { mapToMarketingArtifact, deriveDestination } from "@/lib/artifactMapper";
 import { publishViaCli } from "@/lib/publishBridge";
+import { createContentItem } from "@/lib/contentItemStore";
 
 export async function POST(
   req: NextRequest,
@@ -68,11 +69,28 @@ export async function POST(
       },
     });
 
+    let contentItemId: string | undefined;
+
     if (!dryRun && publishResult.ok) {
       await db.artifact.update({
         where: { id: artifact.id },
         data: { status: "published" },
       });
+
+      // Create a ContentItem record for Zoho export
+      const metadata = (artifact.metadata as Record<string, unknown>) || {};
+      const brand = deriveBrand(siteKey, metadata);
+      const socialCaption = deriveSocialCaption(artifact);
+      const canonicalUrl = extractCanonicalUrl(publishResult.stdout);
+      const imageUrls = buildImageUrls(artifact.artifactAssets || []);
+
+      const contentItem = createContentItem({
+        brand,
+        socialCaption,
+        canonicalUrl,
+        imageUrls,
+      });
+      contentItemId = contentItem.id;
     }
 
     results.push({
@@ -82,8 +100,55 @@ export async function POST(
       dryRun,
       stdout: publishResult.stdout,
       logId: log.id,
+      contentItemId,
     });
   }
 
   return NextResponse.json({ results });
+}
+
+// ── Helpers for ContentItem creation ──
+
+function deriveBrand(
+  siteKey: string,
+  metadata: Record<string, unknown>
+): "LLIF" | "BestLife" {
+  if (metadata.brand) {
+    return String(metadata.brand).toLowerCase() === "llif" ? "LLIF" : "BestLife";
+  }
+  return siteKey.startsWith("llif") ? "LLIF" : "BestLife";
+}
+
+function deriveSocialCaption(artifact: {
+  title: string;
+  content: string;
+}): string {
+  let contentObj: Record<string, unknown>;
+  try {
+    contentObj = JSON.parse(artifact.content);
+  } catch {
+    contentObj = {};
+  }
+  // Prefer body (social), then excerpt, then title
+  return String(
+    contentObj.body || contentObj.excerpt || artifact.title || ""
+  );
+}
+
+function extractCanonicalUrl(stdout: string): string | undefined {
+  // The WP adapter prints the page link in stdout, e.g.:
+  //   Published page 123 on llif-staging -> https://staging.example.com/page/
+  const match = stdout.match(/-> (https?:\/\/\S+)/);
+  return match?.[1];
+}
+
+const PORTAL_PUBLIC_URL = process.env.PORTAL_PUBLIC_URL || "";
+
+function buildImageUrls(
+  artifactAssets: Array<{ asset: { id: string; mimeType: string } }>
+): string[] {
+  if (!PORTAL_PUBLIC_URL) return [];
+  return artifactAssets
+    .filter((aa) => aa.asset.mimeType.startsWith("image/"))
+    .map((aa) => `${PORTAL_PUBLIC_URL}/api/assets/${aa.asset.id}`);
 }

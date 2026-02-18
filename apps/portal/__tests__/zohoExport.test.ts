@@ -1,5 +1,7 @@
-import { describe, it } from "node:test";
+import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
+import fs from "fs";
+import path from "path";
 
 // Import using relative paths since we're outside the @/ alias scope
 import { csvEscape, formatZohoDate, formatZohoTime, buildCsvContent } from "../src/lib/zohoExport";
@@ -159,5 +161,73 @@ describe("buildCsvContent", () => {
       { date: "01/01/2026", time: "09:00 AM", message: "Hello, world!", linkUrl: "", imageUrls: [] },
     ]);
     assert.ok(csv.includes('"Hello, world!"'));
+  });
+});
+
+// ── ContentItem JSONL store ──
+
+describe("contentItemStore", () => {
+  const testDir = path.join(process.cwd(), "data");
+  const testFile = path.join(testDir, "content-items.jsonl");
+  let originalContent: string | null = null;
+
+  before(() => {
+    // Back up existing file if present
+    if (fs.existsSync(testFile)) {
+      originalContent = fs.readFileSync(testFile, "utf-8");
+    }
+    // Clear for test
+    if (!fs.existsSync(testDir)) {
+      fs.mkdirSync(testDir, { recursive: true });
+    }
+    fs.writeFileSync(testFile, "", "utf-8");
+  });
+
+  after(() => {
+    // Restore original file
+    if (originalContent !== null) {
+      fs.writeFileSync(testFile, originalContent, "utf-8");
+    } else if (fs.existsSync(testFile)) {
+      fs.unlinkSync(testFile);
+    }
+  });
+
+  it("creates a content item and reads it back by id", async () => {
+    const { createContentItem, getContentItemById } = await import("../src/lib/contentItemStore");
+
+    const item = createContentItem({
+      brand: "LLIF",
+      socialCaption: "Check out this article!",
+      canonicalUrl: "https://example.com/article",
+      imageUrls: ["https://example.com/img1.jpg"],
+    });
+
+    assert.ok(item.id);
+    assert.strictEqual(item.brand, "LLIF");
+    assert.strictEqual(item.socialCaption, "Check out this article!");
+    assert.ok(item.createdAt);
+
+    const found = getContentItemById(item.id);
+    assert.ok(found);
+    assert.strictEqual(found!.id, item.id);
+    assert.strictEqual(found!.brand, "LLIF");
+    assert.deepStrictEqual(found!.imageUrls, ["https://example.com/img1.jpg"]);
+  });
+
+  it("returns null for unknown id", async () => {
+    const { getContentItemById } = await import("../src/lib/contentItemStore");
+    const found = getContentItemById("nonexistent-id");
+    assert.strictEqual(found, null);
+  });
+
+  it("last-match-wins for duplicate ids", async () => {
+    const { getContentItemById } = await import("../src/lib/contentItemStore");
+    const id = "test-dup-id";
+    fs.appendFileSync(testFile, JSON.stringify({ id, brand: "LLIF", socialCaption: "first", imageUrls: [], createdAt: new Date().toISOString() }) + "\n");
+    fs.appendFileSync(testFile, JSON.stringify({ id, brand: "LLIF", socialCaption: "second", imageUrls: [], createdAt: new Date().toISOString() }) + "\n");
+
+    const found = getContentItemById(id);
+    assert.ok(found);
+    assert.strictEqual(found!.socialCaption, "second");
   });
 });

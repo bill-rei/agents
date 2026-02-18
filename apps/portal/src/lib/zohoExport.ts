@@ -1,4 +1,4 @@
-import archiver from "archiver";
+import JSZip from "jszip";
 
 export function csvEscape(value: string): string {
   if (/[",\n\r]/.test(value)) {
@@ -49,16 +49,9 @@ export function buildCsvContent(rows: ZohoRow[]): string {
 export async function buildZipBuffer(
   csvFiles: { filename: string; content: string }[]
 ): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const archive = archiver("zip", { zlib: { level: 9 } });
-    const chunks: Buffer[] = [];
-    archive.on("data", (chunk: Buffer) => chunks.push(chunk));
-    archive.on("end", () => resolve(Buffer.concat(chunks)));
-    archive.on("error", reject);
-
-    for (const f of csvFiles) {
-      archive.append(f.content, { name: f.filename });
-    }
-    archive.finalize();
-  });
+  const zip = new JSZip();
+  for (const f of csvFiles) {
+    zip.file(f.filename, f.content);
+  }
+  return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }) as Promise<Buffer>;
 }

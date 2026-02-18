@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { ENABLED_CHANNEL_KEYS, ZOHO_CHANNELS, isLlifBrand } from "@/lib/zohoSocialConfig";
 import { formatZohoDate, formatZohoTime, buildCsvContent, buildZipBuffer, type ZohoRow } from "@/lib/zohoExport";
-
-const PORTAL_PUBLIC_URL = process.env.PORTAL_PUBLIC_URL || "";
+import { getContentItemById } from "@/lib/contentItemStore";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,10 +12,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { runId, artifactIds, scheduledAtISO, channels } = body;
+  const { contentItemId, scheduledAtISO, channels } = body;
 
-  if (!runId) {
-    return NextResponse.json({ error: "runId is required" }, { status: 400 });
+  if (!contentItemId) {
+    return NextResponse.json({ error: "contentItemId is required" }, { status: 400 });
   }
 
   // Validate channels
@@ -41,73 +39,54 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid scheduledAtISO" }, { status: 400 });
   }
 
-  // Fetch approved artifacts
-  const artifacts = await db.artifact.findMany({
-    where: {
-      runId,
-      status: "approved",
-      ...(artifactIds ? { id: { in: artifactIds } } : {}),
-    },
-    include: {
-      run: { include: { project: true } },
-      artifactAssets: { include: { asset: true }, orderBy: { order: "asc" } },
-    },
-  });
-
-  if (artifacts.length === 0) {
-    return NextResponse.json({ error: "No approved artifacts found" }, { status: 400 });
+  // Look up content item
+  const contentItem = getContentItemById(contentItemId);
+  if (!contentItem) {
+    return NextResponse.json({ error: "Content item not found" }, { status: 404 });
   }
 
-  // Brand boundary check
-  for (const artifact of artifacts) {
-    const metadata = (artifact.metadata as Record<string, unknown>) || {};
-    const brand = (metadata.brand as string) || null;
-    if (!isLlifBrand(brand)) {
+  // Brand boundary
+  if (!isLlifBrand(contentItem.brand)) {
+    return NextResponse.json(
+      { error: `Brand "${contentItem.brand}" is not eligible for Zoho Social export. Only LLIF is supported.` },
+      { status: 403 }
+    );
+  }
+
+  // Validate image URLs are absolute
+  for (const url of contentItem.imageUrls) {
+    if (!/^https?:\/\//i.test(url)) {
       return NextResponse.json(
-        { error: `Artifact "${artifact.title || artifact.id}" has brand "${brand || "(none)"}" — Zoho Social export is only available for LLIF` },
-        { status: 403 }
+        { error: `Image URL must be absolute http/https: ${url}` },
+        { status: 400 }
       );
     }
   }
 
-  // Build rows
+  // Build row
   const date = formatZohoDate(scheduledAt);
   const time = formatZohoTime(scheduledAt);
 
-  const rows: ZohoRow[] = artifacts.map((artifact) => {
-    let contentObj: Record<string, unknown>;
-    try {
-      contentObj = JSON.parse(artifact.content);
-    } catch {
-      contentObj = { body: artifact.content };
-    }
-
-    const message = String(contentObj.body || contentObj.text || artifact.title || "");
-    const linkUrl = String(contentObj.link_url || contentObj.url || "");
-
-    const imageAssets = (artifact.artifactAssets || [])
-      .filter((aa) => aa.asset.mimeType.startsWith("image/"))
-      .slice(0, 10);
-
-    const imageUrls = PORTAL_PUBLIC_URL
-      ? imageAssets.map((aa) => `${PORTAL_PUBLIC_URL}/api/assets/${aa.asset.id}`)
-      : [];
-
-    return { date, time, message, linkUrl, imageUrls };
-  });
+  const row: ZohoRow = {
+    date,
+    time,
+    message: contentItem.socialCaption,
+    linkUrl: contentItem.canonicalUrl || "",
+    imageUrls: contentItem.imageUrls.slice(0, 10),
+  };
 
   // Build one CSV per channel
   const csvFiles = channels.map((channel: string) => {
     const label = ZOHO_CHANNELS.find((c) => c.key === channel)?.label || channel;
     return {
       filename: `${label.replace(/[^a-zA-Z0-9]/g, "_")}.csv`,
-      content: buildCsvContent(rows),
+      content: buildCsvContent([row]),
     };
   });
 
   const zipBuffer = await buildZipBuffer(csvFiles);
 
-  return new NextResponse(zipBuffer, {
+  return new NextResponse(new Uint8Array(zipBuffer), {
     headers: {
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="zoho-social-export.zip"`,

@@ -208,14 +208,21 @@ export default function ProjectsPage() {
 
       <div className="space-y-2">
         {projects.map((p) => (
-          <Link
+          <div
             key={p.id}
-            href={`/runs?projectId=${p.id}`}
-            className="block bg-white border rounded p-4 hover:border-gray-400"
+            className="bg-white border rounded p-4 hover:border-gray-400 flex items-center justify-between"
           >
-            <div className="font-medium">{p.name}</div>
-            <div className="text-sm text-gray-500">{p.slug} &middot; {targetLabels(p)}</div>
-          </Link>
+            <Link href={`/runs?projectId=${p.id}`} className="flex-1">
+              <div className="font-medium">{p.name}</div>
+              <div className="text-sm text-gray-500">{p.slug} &middot; {targetLabels(p)}</div>
+            </Link>
+            <Link
+              href={`/projects/${p.id}`}
+              className="text-xs text-blue-600 hover:text-blue-800 px-3 py-1 border rounded hover:bg-blue-50"
+            >
+              Docs &amp; Settings
+            </Link>
+          </div>
         ))}
         {projects.length === 0 && (
           <p className="text-gray-500 text-sm">No projects yet.</p>

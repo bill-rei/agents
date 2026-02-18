@@ -38,8 +38,14 @@ interface Execution {
 interface RunOption {
   id: string;
   workflowKey: string;
-  project: { name: string };
+  project: { id: string; name: string };
   createdAt: string;
+}
+
+interface ProjectDoc {
+  id: string;
+  filename: string;
+  size: number;
 }
 
 export default function AgentPage() {
@@ -56,6 +62,7 @@ export default function AgentPage() {
   const [executing, setExecuting] = useState(false);
   const [executions, setExecutions] = useState<Execution[]>([]);
   const [expandedExec, setExpandedExec] = useState<string | null>(null);
+  const [projectDocs, setProjectDocs] = useState<ProjectDoc[]>([]);
 
   // Load agent config
   useEffect(() => {
@@ -78,6 +85,18 @@ export default function AgentPage() {
         }
       });
   }, [selectedRunId]);
+
+  // Load project docs when run is selected
+  useEffect(() => {
+    if (!selectedRunId || runs.length === 0) return;
+    const run = runs.find((r) => r.id === selectedRunId);
+    if (run?.project?.id) {
+      fetch(`/api/projects/${run.project.id}/docs`)
+        .then((r) => r.json())
+        .then((data) => setProjectDocs(Array.isArray(data) ? data : []))
+        .catch(() => setProjectDocs([]));
+    }
+  }, [selectedRunId, runs]);
 
   // Load executions
   const loadExecutions = useCallback(async () => {
@@ -224,6 +243,31 @@ export default function AgentPage() {
           {parentExecId && (
             <div className="text-xs text-blue-500 mb-3">
               Linked from execution: {parentExecId.slice(0, 8)}...
+            </div>
+          )}
+
+          {/* Project reference docs indicator */}
+          {projectDocs.length > 0 && (
+            <div className="mb-3 bg-blue-50 border border-blue-200 rounded p-3">
+              <div className="text-xs font-medium text-blue-700 mb-1">
+                Reference Docs ({projectDocs.length} file{projectDocs.length !== 1 ? "s" : ""}) — auto-attached
+              </div>
+              <div className="space-y-1">
+                {projectDocs.map((doc) => (
+                  <div key={doc.id} className="text-xs text-blue-600">
+                    {doc.filename} ({(doc.size / 1024).toFixed(0)} KB)
+                  </div>
+                ))}
+              </div>
+              <div className="text-[10px] text-blue-400 mt-1">
+                Manage docs in{" "}
+                <Link
+                  href={`/projects/${runs.find((r) => r.id === selectedRunId)?.project?.id}`}
+                  className="underline"
+                >
+                  Project Settings
+                </Link>
+              </div>
             </div>
           )}
 

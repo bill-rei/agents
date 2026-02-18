@@ -186,9 +186,16 @@ export interface ExecuteResult {
   durationMs: number;
 }
 
+export interface FileAttachment {
+  filename: string;
+  buffer: Buffer;
+  mimeType: string;
+}
+
 export async function executeAgent(
   agentKey: string,
-  inputs: Record<string, string>
+  inputs: Record<string, string>,
+  files?: FileAttachment[]
 ): Promise<ExecuteResult> {
   const agent = AGENTS[agentKey];
   if (!agent) throw new Error(`Unknown agent: ${agentKey}`);
@@ -197,11 +204,30 @@ export async function executeAgent(
   const startTime = Date.now();
 
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(inputs),
-    });
+    let response: Response;
+
+    if (files && files.length > 0 && agent.supportsFiles) {
+      // Send as multipart FormData when files are present
+      const formData = new FormData();
+      // Add each input field
+      for (const [key, value] of Object.entries(inputs)) {
+        if (value) formData.append(key, value);
+      }
+      // Add files
+      for (const file of files) {
+        const uint8 = new Uint8Array(file.buffer);
+        const blob = new Blob([uint8], { type: file.mimeType });
+        formData.append("files", blob, file.filename);
+      }
+      response = await fetch(url, { method: "POST", body: formData });
+    } else {
+      // Standard JSON request
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inputs),
+      });
+    }
 
     const durationMs = Date.now() - startTime;
 

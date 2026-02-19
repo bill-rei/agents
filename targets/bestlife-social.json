@@ -3,14 +3,106 @@
   "label": "Best Life – Social Media",
   "type": "social",
   "brand": "bestlife",
-  "environment": "staging",
+  "environment": "production",
   "channels": {
-    "facebook_page": { "label": "Facebook Page" },
-    "x_profile": { "label": "X (Twitter)" },
-    "linkedin_company_page": { "label": "LinkedIn Company Page" },
-    "instagram_profile": { "label": "Instagram" },
-    "youtube_channel": { "label": "YouTube" },
-    "google_business_profile": { "label": "Google Business Profile" },
-    "bluesky_profile": { "label": "Bluesky" }
+    "x_profile": {
+      "label": "X (Twitter)",
+      "profileUrl": "https://x.com/getbestlifeapp",
+      "publishMode": "direct",
+      "charLimit": 280,
+      "supportsText": true,
+      "supportsImages": true,
+      "supportsVideo": true,
+      "envVarPrefix": "BLA_X_",
+      "notes": "OAuth 1.0a. Requires elevated access for media uploads."
+    },
+    "linkedin_company_page": {
+      "label": "LinkedIn Company Page",
+      "profileUrl": "https://www.linkedin.com/company/best-life-inc",
+      "publishMode": "direct",
+      "charLimit": 3000,
+      "supportsText": true,
+      "supportsImages": true,
+      "supportsVideo": true,
+      "envVarPrefix": "BLA_LINKEDIN_",
+      "notes": "OAuth 2.0. Requires w_organization_social scope. Token expires in 60 days."
+    },
+    "facebook_page": {
+      "label": "Facebook Page",
+      "profileUrl": "https://www.facebook.com/getbestlifeapp/",
+      "publishMode": "direct",
+      "charLimit": 63206,
+      "supportsText": true,
+      "supportsImages": true,
+      "supportsVideo": true,
+      "envVarPrefix": "BLA_FACEBOOK_",
+      "notes": "Graph API. Long-lived page access token."
+    },
+    "instagram_profile": {
+      "label": "Instagram",
+      "profileUrl": "https://www.instagram.com/getbestlifeapp",
+      "publishMode": "assist",
+      "charLimit": 2200,
+      "supportsText": false,
+      "supportsImages": true,
+      "supportsVideo": true,
+      "envVarPrefix": "BLA_INSTAGRAM_",
+      "notes": "Requires Business Account + linked Facebook Page. Image/video required; no text-only posts."
+    },
+    "threads_profile": {
+      "label": "Threads",
+      "profileUrl": "https://www.threads.com/@getbestlifeapp",
+      "publishMode": "assist",
+      "charLimit": 500,
+      "supportsText": true,
+      "supportsImages": true,
+      "supportsVideo": true,
+      "envVarPrefix": "BLA_THREADS_",
+      "notes": "API launched 2024. Phase 2 promotion candidate."
+    },
+    "bluesky_profile": {
+      "label": "BlueSky",
+      "profileUrl": "https://bsky.app/profile/getbestlifeapp.bsky.social",
+      "publishMode": "assist",
+      "charLimit": 300,
+      "supportsText": true,
+      "supportsImages": true,
+      "supportsVideo": false,
+      "envVarPrefix": "BLA_BLUESKY_",
+      "notes": "AT Protocol. App-password auth (not OAuth). Scoped to post-only."
+    },
+    "reddit_community": {
+      "label": "Reddit (r/bestlifeapp)",
+      "profileUrl": "https://www.reddit.com/r/bestlifeapp/",
+      "publishMode": "assist",
+      "charLimit": 40000,
+      "supportsText": true,
+      "supportsImages": true,
+      "supportsVideo": true,
+      "envVarPrefix": "BLA_REDDIT_",
+      "notes": "Requires moderator access to r/bestlifeapp. API v2 changes 2023."
+    },
+    "youtube_channel": {
+      "label": "YouTube",
+      "profileUrl": "https://www.youtube.com/@getbestlifeapp",
+      "publishMode": "assist",
+      "charLimit": 500,
+      "supportsText": false,
+      "supportsImages": false,
+      "supportsVideo": true,
+      "envVarPrefix": "BLA_YOUTUBE_",
+      "notes": "Community Posts require 500+ subscribers. Video upload is a separate pipeline."
+    },
+    "tiktok_business_profile": {
+      "label": "TikTok",
+      "profileUrl": "https://www.tiktok.com/@getbestlifeapp",
+      "publishMode": "assist",
+      "charLimit": 2200,
+      "supportsText": false,
+      "supportsImages": false,
+      "supportsVideo": true,
+      "envVarPrefix": "BLA_TIKTOK_",
+      "notes": "Content Posting API is video-only. Use TikTok Studio for manual posting."
+    }
   }
 }

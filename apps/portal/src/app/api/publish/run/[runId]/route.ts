@@ -7,6 +7,9 @@ import { createContentItem } from "@/lib/contentItemStore";
 import { publishDesignLockedPage } from "@/lib/wp/publishDesignLockedPage";
 import { getTargetsForArtifactType, getTargetType, deriveBrandFromTarget } from "@/lib/targetRegistry";
 import type { TargetRegistry } from "@/lib/targetRegistry";
+import { runBestLifeSocialJob } from "@/lib/publishers/bestlife";
+import type { SocialArtifact } from "@/lib/publishers/bestlife/directPublisher";
+import { getAllChannelKeys as getBestLifeChannelKeys } from "@/lib/publishers/bestlife/channelRegistry";
 
 export async function POST(
   req: NextRequest,
@@ -108,13 +111,14 @@ export async function POST(
   return NextResponse.json({ results });
 }
 
-// ── Social post publishing (Zoho bulk CSV path) ──
+// ── Social post publishing — brand-routed ────────────────────────────────────
 
 async function publishSocialPost(
   artifact: {
     id: string;
     title: string;
     content: string;
+    run: { project: { slug: string } };
     artifactAssets?: Array<{ asset: { id: string; mimeType: string } }> | null;
   },
   brand: "LLIF" | "BestLife",
@@ -122,6 +126,12 @@ async function publishSocialPost(
   userId: string,
   targetSiteKey?: string,
 ): Promise<Record<string, unknown>> {
+  // ── Best Life → Direct publish + Assist Pack ──────────────────────────────
+  if (brand === "BestLife") {
+    return publishBestLifeSocial(artifact, dryRun, userId);
+  }
+
+  // ── LLIF → Zoho bulk CSV path (unchanged) ────────────────────────────────
   const contentItemId = dryRun ? undefined : createSocialContentItem(artifact, brand);
 
   await db.publishLog.create({
@@ -151,6 +161,91 @@ async function publishSocialPost(
       : `ContentItem created for Zoho bulk CSV export (${brand})`,
     contentItemId,
   };
+}
+
+// ── Best Life social publish (fan-out via publish run) ────────────────────────
+
+async function publishBestLifeSocial(
+  artifact: {
+    id: string;
+    title: string;
+    content: string;
+    run: { project: { slug: string } };
+    artifactAssets?: Array<{ asset: { id: string; mimeType: string } }> | null;
+  },
+  dryRun: boolean,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  // Build SocialArtifact from DB artifact
+  let contentObj: Record<string, unknown> = {};
+  try {
+    contentObj = JSON.parse(artifact.content);
+  } catch {
+    contentObj = {};
+  }
+
+  const body = String(contentObj.body || contentObj.excerpt || artifact.title || "");
+  const hashtags = (contentObj.hashtags as string[]) || [];
+  const linkUrl = (contentObj.cta as Record<string, string>)?.url || undefined;
+
+  const PORTAL_PUBLIC_URL = process.env.PORTAL_PUBLIC_URL || "";
+  const mediaUrls = PORTAL_PUBLIC_URL
+    ? (artifact.artifactAssets || [])
+        .filter((aa) => aa.asset.mimeType.startsWith("image/"))
+        .map((aa) => `${PORTAL_PUBLIC_URL}/api/assets/${aa.asset.id}`)
+    : [];
+
+  const socialArtifact: SocialArtifact = {
+    id: artifact.id,
+    title: artifact.title,
+    body,
+    hashtags,
+    mediaUrls,
+    linkUrl,
+  };
+
+  if (dryRun) {
+    return {
+      artifactId: artifact.id,
+      title: artifact.title,
+      ok: true,
+      dryRun: true,
+      target: "bestlife-direct+assist",
+      stdout: `[dry-run] Would publish BestLife social to: ${getBestLifeChannelKeys().join(", ")}`,
+    };
+  }
+
+  try {
+    const job = await runBestLifeSocialJob({
+      artifactId: artifact.id,
+      brand: "bestlife",
+      artifact: socialArtifact,
+      selectedChannelKeys: getBestLifeChannelKeys(), // fan-out: all channels
+      projectSlug: artifact.run.project.slug,
+      userId,
+    });
+
+    return {
+      artifactId: artifact.id,
+      title: artifact.title,
+      ok: job.status !== "failed",
+      dryRun: false,
+      target: "bestlife-direct+assist",
+      stdout: `BestLife publish job ${job.id}: ${job.status}`,
+      publishJobId: job.id,
+      assistPackPath: job.assistPackPath,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      artifactId: artifact.id,
+      title: artifact.title,
+      ok: false,
+      dryRun: false,
+      target: "bestlife-direct+assist",
+      stdout: `BestLife publish failed: ${msg}`,
+    };
+  }
 }
 
 function createSocialContentItem(

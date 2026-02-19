@@ -1,0 +1,277 @@
+%% ════════════════════════════════════════════════════════════════════
+%% DIAGRAMS.mmd — Marketing Agents Platform
+%% Render with: https://mermaid.live or VS Code Mermaid Preview
+%% ════════════════════════════════════════════════════════════════════
+
+
+%% ────────────────────────────────────────────────────────────────────
+%% 1. C4-ish Level 1 — System Context
+%% ────────────────────────────────────────────────────────────────────
+
+graph TD
+    subgraph Users["Users"]
+        U1[Marketing Team Member]
+        U2[Jim / Power User]
+    end
+
+    subgraph System["Marketing Agents Platform (this repo)"]
+        P[Portal\nNext.js 14\nport 4000]
+        AG[AI Agent Servers\n8 × Express.js\nports 3000–3007]
+        CLI[Publish CLI\nscripts/publish.js]
+    end
+
+    subgraph External["External Systems"]
+        WP_LLIF[WordPress\nLLIF Staging]
+        WP_BLA[WordPress\nBestLife Staging]
+        X[Twitter / X\nv2 API]
+        LI[LinkedIn\nUGC Posts API]
+        FB[Facebook\nGraph API v21.0]
+        ZOHO[Zoho Social\nBulk Scheduler\nmanual import]
+        CLAUDE[Anthropic API\nClaude]
+        PG[PostgreSQL\nDatabase]
+    end
+
+    U1 -->|Operates via browser| P
+    U2 -->|Operates via browser| P
+    P -->|HTTP POST| AG
+    P -->|child_process.execFile| CLI
+    AG -->|API calls| CLAUDE
+    CLI -->|REST API| WP_LLIF
+    CLI -->|REST API| WP_BLA
+    P -->|direct API| X
+    P -->|direct API| LI
+    P -->|direct API| FB
+    P -->|CSV export download| ZOHO
+    P -->|Prisma| PG
+
+
+%% ────────────────────────────────────────────────────────────────────
+%% 2. C4-ish Level 2 — Container / Component Map
+%% ────────────────────────────────────────────────────────────────────
+
+graph LR
+    subgraph Portal["Portal — apps/portal/ (Next.js 14, port 4000)"]
+        direction TB
+        UI[UI Pages\nWorkspaces, Runs,\nArtifacts, Review, Publish,\nAgents, Assets]
+        API[API Routes\n/api/**]
+        GW[Agent Gateway\nagentGateway.ts]
+        BR[Publish Bridge\npublishBridge.ts]
+        AUTH[Auth\nauth.ts\nJWT + bcrypt]
+        DB[DB Client\ndb.ts / Prisma]
+        STOR[Storage\nstorage.ts\nlocal disk]
+        TGT[Target Registry\ntargetRegistry.ts]
+        AM[Artifact Mapper\nartifactMapper.ts]
+        BLP[BestLife Publisher\npublishers/bestlife/]
+        ZE[Zoho Export\nzohoExport.ts]
+        WPC[WP Client\nwp/wpClient.ts]
+    end
+
+    subgraph Agents["AI Agent Servers (Express.js)"]
+        STR[Strategist :3003]
+        MC[Marketing Compiler :3000]
+        ED[Editor :3001]
+        DI[Distributor :3004]
+        OP[Optimizer :3005]
+        SA[Site Auditor :3002]
+        WMA[Messaging Architect :3006]
+        WR[Web Renderer :3007]
+    end
+
+    subgraph Publishers["Publish CLI Adapters (scripts/publish.js)"]
+        WP[WP Elementor Staging\npublishers/web/wpElementorStaging.js]
+        XD[X Direct\npublishers/social/xDirect.js]
+        LD[LinkedIn Direct\npublishers/social/linkedinDirect.js]
+        ZS[Zoho Social\npublishers/social/zohoSocial.js\n⚠ stub]
+        RG[Reddit Guard\npublishers/social/redditGuard.js]
+    end
+
+    subgraph DataStores["Data Stores"]
+        PG2[(PostgreSQL)]
+        DISK[(Local Disk\nuploads/)]
+        JSONL[(JSONL Files\npublish-log.jsonl\ndata/content-items.jsonl)]
+        TARGETS[(Target Registry\ntargets/*.json)]
+    end
+
+    UI --> API
+    API --> AUTH
+    API --> GW
+    API --> BR
+    API --> DB
+    API --> STOR
+    API --> TGT
+    API --> AM
+    API --> BLP
+    API --> ZE
+    API --> WPC
+    GW -->|HTTP POST /api/compile| STR & MC & ED & DI & OP & SA & WMA & WR
+    BR -->|execFile node publish.js| WP & XD & LD & ZS & RG
+    DB --> PG2
+    STOR --> DISK
+    ZE --> JSONL
+    WP --> JSONL
+    TGT --> TARGETS
+
+
+%% ────────────────────────────────────────────────────────────────────
+%% 3. Sequence Diagram — Compile + Publish Web Page
+%% ────────────────────────────────────────────────────────────────────
+
+sequenceDiagram
+    actor User
+    participant Portal as Portal UI/API
+    participant GW as Agent Gateway
+    participant Agent as Agent Server (e.g. Compiler :3000)
+    participant DB as PostgreSQL
+    participant Bridge as Publish Bridge
+    participant CLI as scripts/publish.js
+    participant WP as WordPress REST API
+
+    User->>Portal: Fill agent form + click Execute
+    Portal->>DB: Load project docs (scope=project assets)
+    Portal->>GW: executeAgent(agentKey, inputs, files[])
+    GW->>Agent: POST /api/compile (JSON or multipart FormData)
+    Agent-->>GW: { result: "..." }
+    GW-->>Portal: { ok: true, result }
+    Portal->>DB: INSERT AgentExecution (inputs, output, inputFiles)
+    Portal-->>User: Show output
+
+    User->>Portal: Click "Save as Artifact"
+    Portal->>DB: INSERT Artifact (type, title, content, status=draft)
+    Portal-->>User: Artifact created
+
+    User->>Portal: Approve artifact (Review tab)
+    Portal->>DB: INSERT Approval (decision=approved)
+    Portal->>DB: UPDATE Artifact status=approved
+    Portal-->>User: Artifact approved
+
+    User->>Portal: Click "Publish" (Publish tab)
+    Portal->>DB: findMany Artifacts WHERE status=approved
+    Portal->>Portal: mapToMarketingArtifact() → marketing artifact JSON
+    Portal->>Bridge: publishViaCli(artifact, { dryRun: false, siteKey, pageKey })
+    Bridge->>CLI: execFile node publish.js --file /tmp/xxx.json --apply --site llif-staging
+    CLI->>CLI: validateArtifact()
+    CLI->>CLI: resolvePageSlug() → slug
+    CLI->>WP: GET /wp-json/wp/v2/pages?slug={slug} (lookup page ID)
+    WP-->>CLI: [{ id: 123 }]
+    CLI->>WP: POST /wp-json/wp/v2/pages/123 (content payload)
+    WP-->>CLI: { link: "https://stg-..." }
+    CLI->>CLI: appendLog() → publish-log.jsonl
+    CLI-->>Bridge: exit 0, stdout
+    Bridge-->>Portal: { ok: true, stdout }
+    Portal->>DB: INSERT PublishLog
+    Portal->>DB: UPDATE Artifact status=published
+    Portal-->>User: Publish result + log link
+
+
+%% ────────────────────────────────────────────────────────────────────
+%% 4. Sequence Diagram — BestLife Social Publish (Direct + Assist Pack)
+%% ────────────────────────────────────────────────────────────────────
+
+sequenceDiagram
+    actor User
+    participant Panel as BestLife Social Panel
+    participant API as POST /api/publish/bestlife/social
+    participant Guard as validateBestLifePublish()
+    participant Orch as runBestLifeSocialJob()
+    participant X as Twitter v2 API
+    participant LI as LinkedIn UGC Posts API
+    participant FB as Facebook Graph API
+    participant APG as assistPackGenerator
+    participant DB as PostgreSQL
+    participant Disk as Local Disk (uploads/)
+
+    User->>Panel: Select artifact + channels + click Publish
+    Panel->>API: POST { artifactId, selectedChannels }
+    API->>API: requireAuth()
+    API->>Guard: validateBestLifePublish(brand, channels)
+    Guard-->>API: null (valid)
+    API->>DB: findUnique Artifact (must be approved/published + brand=bestlife)
+    API->>Orch: runBestLifeSocialJob({ artifactId, channels, ... })
+    Orch->>DB: INSERT PublishJob (status=running)
+
+    par Direct channels (parallel)
+        Orch->>X: POST /2/tweets
+        X-->>Orch: { data: { id, text } }
+        Orch->>LI: POST /ugcPosts
+        LI-->>Orch: { id: "urn:li:share:..." }
+        Orch->>FB: POST /{pageId}/feed
+        FB-->>Orch: { id: "..." }
+    end
+
+    Orch->>APG: buildAssistPack(artifact, assistChannelKeys)
+    APG-->>Orch: AssistPack { channels: [...] }
+    Orch->>APG: writeAssistPack(pack, projectSlug, jobId, uploadDir)
+    APG->>Disk: Write {jobId}.json + {jobId}.md
+    Disk-->>APG: OK
+    Orch->>DB: UPDATE PublishJob (status, channelResults, assistPackPath)
+    Orch->>DB: INSERT PublishLog per channel
+    Orch-->>API: PublishJob record
+    API-->>Panel: { job: { id, status, channelResults, assistPackPath } }
+    Panel-->>User: Show per-channel results + assist pack download buttons
+
+
+%% ────────────────────────────────────────────────────────────────────
+%% 5. Sequence Diagram — LLIF Social Post → Zoho CSV Export
+%% ────────────────────────────────────────────────────────────────────
+
+sequenceDiagram
+    actor User
+    participant Portal as Portal UI/API
+    participant DB as PostgreSQL
+    participant CIS as contentItemStore.ts
+    participant JSONL as data/content-items.jsonl
+    participant ZE as zohoExport.ts
+    participant User2 as User (manual step)
+    participant ZS as Zoho Social\nBulk Scheduler
+
+    User->>Portal: Approve + Publish LLIF social_post artifact
+    Portal->>Portal: publishSocialPost() → brand=LLIF
+    Portal->>CIS: createContentItem({ brand: LLIF, socialCaption, imageUrls })
+    CIS->>JSONL: appendFileSync (JSON line)
+    Portal->>DB: INSERT PublishLog (destination: zoho-csv:llif)
+    Portal-->>User: Publish result
+
+    Note over User,ZS: Later — when ready to schedule posts
+
+    User->>Portal: Export → Zoho Social (select date range + brand)
+    Portal->>JSONL: readFileSync (filter by brand/date)
+    Portal->>ZE: buildCsvContent(rows) per channel
+    Portal->>ZE: buildZipBuffer([{ filename, content }])
+    ZE-->>Portal: ZIP buffer
+    Portal-->>User: Download ZIP
+
+    User2->>ZS: Upload CSV → Bulk Scheduler → Import
+    ZS-->>User2: Posts scheduled
+
+
+%% ────────────────────────────────────────────────────────────────────
+%% 6. Flowchart — Artifact Lifecycle
+%% ────────────────────────────────────────────────────────────────────
+
+flowchart TD
+    A([Start: Run Created]) --> B[Agent Execution\nUser runs agent via Portal]
+    B --> C[AgentExecution saved\nstatus: completed]
+    C --> D{Save as Artifact?}
+    D -- No --> B
+    D -- Yes --> E[Artifact created\nstatus: draft]
+    E --> F[Edit / Iterate\nUser edits content or\nruns more agents]
+    F --> G[Submit for Review]
+    G --> H{Reviewer Decision}
+    H -- Approved --> I[status: approved]
+    H -- Rejected --> J[status: rejected\nEnd or restart]
+    H -- Needs Changes --> F
+    I --> K{Publish via Portal}
+    K -- Dry Run --> L[Preview output\nNo changes made]
+    L --> K
+    K -- Apply --> M{Artifact type?}
+    M -- web_page --> N[publishViaCli\n→ WP REST API\n→ PublishLog]
+    M -- social_post\nLLIF --> O[ContentItem created\n→ Zoho CSV export]
+    M -- social_post\nBestLife --> P[Direct: X/LinkedIn/Facebook\nAssist: Pack generated\n→ PublishJob]
+    N --> Q[status: published]
+    O --> Q
+    P --> Q
+    Q --> R([End: Published])
+
+    style J fill:#f99,stroke:#c33
+    style Q fill:#9f9,stroke:#3a3
+    style L fill:#ff9,stroke:#aa3

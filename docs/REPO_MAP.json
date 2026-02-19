@@ -1,0 +1,452 @@
+{
+  "_meta": {
+    "description": "Machine-readable inventory of the Marketing Agents Platform",
+    "generated": "2026-02-19",
+    "repo_root": "/home/mcb/projects/agents"
+  },
+
+  "services": [
+    {
+      "name": "Portal",
+      "type": "web_app",
+      "framework": "Next.js 14 (App Router)",
+      "path": "apps/portal/",
+      "port": 4000,
+      "entry": "apps/portal/src/app/layout.tsx",
+      "start": "npm run start:portal",
+      "description": "Operator-facing web UI for orchestrating agent runs, reviewing artifacts, managing assets, and triggering publishing."
+    },
+    {
+      "name": "PostgreSQL",
+      "type": "database",
+      "port": 5432,
+      "docker_port": 5433,
+      "schema": "apps/portal/prisma/schema.prisma",
+      "description": "Primary data store for the portal. Managed via Prisma ORM."
+    }
+  ],
+
+  "agents": [
+    {
+      "key": "marketing-compiler",
+      "label": "Compiler",
+      "port": 3000,
+      "entry": "marketing-compiler/server.js",
+      "endpoint": "/api/compile",
+      "pipeline": "campaign",
+      "pipeline_order": 2,
+      "supports_files": true,
+      "description": "Compiles structured inputs into complete marketing campaign drafts. Accepts file uploads (reference docs)."
+    },
+    {
+      "key": "editor",
+      "label": "Editor",
+      "port": 3001,
+      "entry": "editor/server.js",
+      "endpoint": "/api/compile",
+      "pipeline": "campaign",
+      "pipeline_order": 3,
+      "supports_files": true,
+      "description": "Improves clarity, quality, and channel-fit of campaign assets."
+    },
+    {
+      "key": "site-auditor",
+      "label": "Site Auditor",
+      "port": 3002,
+      "entry": "site-auditor/server.js",
+      "endpoint": "/api/compile",
+      "pipeline": "web",
+      "pipeline_order": 2,
+      "supports_files": true,
+      "description": "Crawls and evaluates live website content against brand/product reality."
+    },
+    {
+      "key": "strategist",
+      "label": "Strategist",
+      "port": 3003,
+      "entry": "strategist/server.js",
+      "endpoint": "/api/compile",
+      "pipeline": "both",
+      "pipeline_order": 1,
+      "supports_files": true,
+      "description": "Decides what campaign to run next based on GTM priorities and constraints."
+    },
+    {
+      "key": "distributor",
+      "label": "Distributor",
+      "port": 3004,
+      "entry": "distributor/server.js",
+      "endpoint": "/api/compile",
+      "pipeline": "campaign",
+      "pipeline_order": 4,
+      "supports_files": true,
+      "description": "Prepares finalized assets for distribution per channel norms."
+    },
+    {
+      "key": "optimizer",
+      "label": "Optimizer",
+      "port": 3005,
+      "entry": "optimizer/server.js",
+      "endpoint": "/api/compile",
+      "pipeline": "campaign",
+      "pipeline_order": 6,
+      "supports_files": true,
+      "description": "Analyzes post-distribution signals and translates them into upstream learnings."
+    },
+    {
+      "key": "website-messaging-architect",
+      "label": "Messaging Architect",
+      "port": 3006,
+      "entry": "website-messaging-architect/server.js",
+      "endpoint": "/api/compile",
+      "pipeline": "web",
+      "pipeline_order": 3,
+      "supports_files": true,
+      "description": "Transforms page audits and strategy into deployable web page copy."
+    },
+    {
+      "key": "web-renderer",
+      "label": "Web Renderer",
+      "port": 3007,
+      "entry": "web-renderer/server.js",
+      "endpoint": "/api/compile",
+      "pipeline": "web",
+      "pipeline_order": 4,
+      "supports_files": false,
+      "description": "Converts structured web copy into clean semantic HTML for WordPress."
+    }
+  ],
+
+  "entry_points": [
+    {
+      "name": "Portal dev server",
+      "command": "npm run start:portal",
+      "path": "apps/portal/",
+      "description": "Starts Next.js dev server on port 4000"
+    },
+    {
+      "name": "Start all agents",
+      "command": "npm run start:all",
+      "path": "scripts/start-all.js",
+      "description": "Spawns all 8 agent Express servers in parallel"
+    },
+    {
+      "name": "Publish CLI",
+      "command": "node scripts/publish.js",
+      "path": "scripts/publish.js",
+      "description": "CLI for publishing artifact JSON files to WordPress or social platforms"
+    },
+    {
+      "name": "Check env",
+      "command": "npm run check:env",
+      "path": "scripts/check-env.js",
+      "description": "Verifies ANTHROPIC_API_KEY and OPENAI_API_KEY are set"
+    },
+    {
+      "name": "marketing-staging-sync",
+      "command": "npm run start:staging-sync -- <args>",
+      "path": "marketing-staging-sync/push-page.mjs",
+      "type": "cli",
+      "description": "CLI for pushing pages directly to WordPress staging (standalone)"
+    }
+  ],
+
+  "publishers": [
+    {
+      "name": "WP Elementor Staging",
+      "path": "publishers/web/wpElementorStaging.js",
+      "artifact_type": "web_page",
+      "platform": "wordpress",
+      "status": "live",
+      "notes": "Staging-only safety guard (URL must contain 'staging' or 'stg-'). Handles media upload + binding."
+    },
+    {
+      "name": "Zoho Social",
+      "path": "publishers/social/zohoSocial.js",
+      "artifact_type": "social_post",
+      "platform": ["x", "linkedin", "facebook", "instagram"],
+      "status": "stub",
+      "notes": "OAuth2 token exchange not implemented. Use Zoho CSV export from portal instead."
+    },
+    {
+      "name": "X Direct",
+      "path": "publishers/social/xDirect.js",
+      "artifact_type": "social_post",
+      "platform": "x",
+      "status": "partial",
+      "notes": "Requires --force-live flag for status=published artifacts."
+    },
+    {
+      "name": "LinkedIn Direct",
+      "path": "publishers/social/linkedinDirect.js",
+      "artifact_type": "social_post",
+      "platform": "linkedin",
+      "status": "partial",
+      "notes": "Requires --force-live flag for status=published artifacts."
+    },
+    {
+      "name": "Reddit Guard",
+      "path": "publishers/social/redditGuard.js",
+      "artifact_type": "social_post",
+      "platform": "reddit",
+      "status": "guard_only",
+      "notes": "Content policy guard. Does not publish live."
+    },
+    {
+      "name": "BestLife Direct Publisher",
+      "path": "apps/portal/src/lib/publishers/bestlife/directPublisher.ts",
+      "artifact_type": "social_post",
+      "platform": ["x_profile", "linkedin_company_page", "facebook_page"],
+      "status": "live_with_todos",
+      "notes": "X OAuth 1.0a signing is a TODO. LinkedIn and Facebook are more complete."
+    },
+    {
+      "name": "BestLife Assist Pack Generator",
+      "path": "apps/portal/src/lib/publishers/bestlife/assistPackGenerator.ts",
+      "artifact_type": "social_post",
+      "platform": ["instagram_profile", "threads_profile", "bluesky_profile", "reddit_community", "youtube_channel", "tiktok_business_profile"],
+      "status": "live",
+      "notes": "Generates JSON + Markdown posting guides. No live API calls — requires human to post manually."
+    }
+  ],
+
+  "integrations": [
+    {
+      "name": "Anthropic API (Claude)",
+      "used_by": ["lib/llm.js", "all agent server.js files"],
+      "purpose": "LLM backbone for all 8 AI agents",
+      "sdk": "@anthropic-ai/sdk ^0.74.0",
+      "auth_method": "API key (ANTHROPIC_API_KEY)"
+    },
+    {
+      "name": "OpenAI API",
+      "used_by": ["lib/llm.js"],
+      "purpose": "Alternate LLM option",
+      "sdk": "openai ^6.18.0",
+      "auth_method": "API key (OPENAI_API_KEY)"
+    },
+    {
+      "name": "WordPress REST API",
+      "used_by": ["publishers/web/wpElementorStaging.js", "apps/portal/src/lib/wp/wpClient.ts"],
+      "purpose": "Push page content and upload media to WordPress staging",
+      "auth_method": "HTTP Basic Auth with Application Password",
+      "endpoints": [
+        "GET /wp-json/wp/v2/pages?slug={slug}",
+        "POST /wp-json/wp/v2/pages/{id}",
+        "POST /wp-json/wp/v2/media"
+      ]
+    },
+    {
+      "name": "Twitter / X v2 API",
+      "used_by": ["apps/portal/src/lib/publishers/bestlife/directPublisher.ts"],
+      "purpose": "Post tweets for BestLife brand",
+      "auth_method": "OAuth 1.0a (TODO: signing not implemented)",
+      "brand": "bestlife",
+      "env_prefix": "BLA_X_"
+    },
+    {
+      "name": "LinkedIn UGC Posts API",
+      "used_by": ["apps/portal/src/lib/publishers/bestlife/directPublisher.ts"],
+      "purpose": "Post company page updates for BestLife brand",
+      "auth_method": "OAuth 2.0 (w_organization_social scope)",
+      "brand": "bestlife",
+      "env_prefix": "BLA_LINKEDIN_",
+      "notes": "Access token expires every 60 days"
+    },
+    {
+      "name": "Facebook Graph API v21.0",
+      "used_by": ["apps/portal/src/lib/publishers/bestlife/directPublisher.ts"],
+      "purpose": "Post to BestLife Facebook page",
+      "auth_method": "Long-lived Page Access Token",
+      "brand": "bestlife",
+      "env_prefix": "BLA_FACEBOOK_"
+    },
+    {
+      "name": "Zoho Social API",
+      "used_by": ["publishers/social/zohoSocial.js"],
+      "purpose": "Schedule/draft LLIF social posts",
+      "auth_method": "OAuth 2.0 (stub — not implemented)",
+      "brand": "llif",
+      "status": "stub"
+    }
+  ],
+
+  "env_vars": [
+    { "name": "ANTHROPIC_API_KEY", "used_by": "lib/llm.js", "purpose": "Claude API key", "required": true, "scope": "root" },
+    { "name": "OPENAI_API_KEY", "used_by": "scripts/check-env.js", "purpose": "OpenAI API key", "required": true, "scope": "root" },
+    { "name": "WP_LLIF_STAGING_URL", "used_by": "publishers/web/wpElementorStaging.js", "purpose": "LLIF WordPress staging base URL", "required": true, "scope": "root" },
+    { "name": "WP_LLIF_STAGING_USER", "used_by": "publishers/web/wpElementorStaging.js", "purpose": "LLIF WP bot username", "required": true, "scope": "root" },
+    { "name": "WP_LLIF_STAGING_APP_PASSWORD", "used_by": "publishers/web/wpElementorStaging.js", "purpose": "LLIF WP application password", "required": true, "scope": "root" },
+    { "name": "WP_BESTLIFE_STAGING_URL", "used_by": "publishers/web/wpElementorStaging.js", "purpose": "BestLife WordPress staging base URL", "required": true, "scope": "root" },
+    { "name": "WP_BESTLIFE_STAGING_USER", "used_by": "publishers/web/wpElementorStaging.js", "purpose": "BestLife WP bot username", "required": true, "scope": "root" },
+    { "name": "WP_BESTLIFE_STAGING_APP_PASSWORD", "used_by": "publishers/web/wpElementorStaging.js", "purpose": "BestLife WP application password", "required": true, "scope": "root" },
+    { "name": "ZOHO_SOCIAL_CLIENT_ID", "used_by": "publishers/social/zohoSocial.js", "purpose": "Zoho Social OAuth2 client ID (stub)", "required": false, "scope": "root" },
+    { "name": "ZOHO_SOCIAL_CLIENT_SECRET", "used_by": "publishers/social/zohoSocial.js", "purpose": "Zoho Social OAuth2 client secret (stub)", "required": false, "scope": "root" },
+    { "name": "ZOHO_SOCIAL_REFRESH_TOKEN", "used_by": "publishers/social/zohoSocial.js", "purpose": "Zoho Social OAuth2 refresh token (stub)", "required": false, "scope": "root" },
+    { "name": "ZOHO_SOCIAL_ZSID", "used_by": "publishers/social/zohoSocial.js", "purpose": "Zoho Social workspace ID", "required": false, "scope": "root" },
+    { "name": "DATABASE_URL", "used_by": "apps/portal/src/lib/db.ts", "purpose": "PostgreSQL connection string", "required": true, "scope": "portal" },
+    { "name": "PORTAL_JWT_SECRET", "used_by": "apps/portal/src/lib/auth.ts", "purpose": "JWT signing secret — CHANGE IN PRODUCTION", "required": true, "scope": "portal" },
+    { "name": "UPLOAD_DIR", "used_by": "apps/portal/src/lib/storage.ts", "purpose": "Local file upload directory (default: ./uploads)", "required": false, "scope": "portal" },
+    { "name": "AGENTS_REPO_ROOT", "used_by": "apps/portal/src/lib/publishBridge.ts, targetRegistry.ts", "purpose": "Path to repo root (default: ../../)", "required": false, "scope": "portal" },
+    { "name": "PORTAL_PUBLIC_URL", "used_by": "apps/portal/src/app/api/publish/run/[runId]/route.ts", "purpose": "Public base URL for asset image URLs in exports", "required": false, "scope": "portal" },
+    { "name": "LLIF_WP_BASE_URL", "used_by": "apps/portal/src/lib/wp/wpClient.ts", "purpose": "LLIF WP URL for design-locked publish", "required": false, "scope": "portal" },
+    { "name": "LLIF_WP_USERNAME", "used_by": "apps/portal/src/lib/wp/wpClient.ts", "purpose": "LLIF WP username (portal publish path)", "required": false, "scope": "portal" },
+    { "name": "LLIF_WP_APP_PASSWORD", "used_by": "apps/portal/src/lib/wp/wpClient.ts", "purpose": "LLIF WP application password (portal publish path)", "required": false, "scope": "portal" },
+    { "name": "BLA_WP_BASE_URL", "used_by": "apps/portal/src/lib/wp/wpClient.ts", "purpose": "BestLife WP URL for design-locked publish", "required": false, "scope": "portal" },
+    { "name": "BLA_WP_USERNAME", "used_by": "apps/portal/src/lib/wp/wpClient.ts", "purpose": "BestLife WP username (portal publish path)", "required": false, "scope": "portal" },
+    { "name": "BLA_WP_APP_PASSWORD", "used_by": "apps/portal/src/lib/wp/wpClient.ts", "purpose": "BestLife WP application password (portal publish path)", "required": false, "scope": "portal" },
+    { "name": "BLA_X_API_KEY", "used_by": "apps/portal/src/lib/publishers/bestlife/directPublisher.ts", "purpose": "Twitter API key (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_X_API_SECRET", "used_by": "directPublisher.ts", "purpose": "Twitter API secret (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_X_ACCESS_TOKEN", "used_by": "directPublisher.ts", "purpose": "Twitter access token (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_X_ACCESS_TOKEN_SECRET", "used_by": "directPublisher.ts", "purpose": "Twitter access token secret (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_LINKEDIN_CLIENT_ID", "used_by": "directPublisher.ts", "purpose": "LinkedIn OAuth2 client ID (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_LINKEDIN_CLIENT_SECRET", "used_by": "directPublisher.ts", "purpose": "LinkedIn OAuth2 client secret (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_LINKEDIN_ACCESS_TOKEN", "used_by": "directPublisher.ts", "purpose": "LinkedIn access token (BestLife, expires 60 days)", "required": false, "scope": "portal" },
+    { "name": "BLA_LINKEDIN_PAGE_ID", "used_by": "directPublisher.ts", "purpose": "LinkedIn company page ID (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_FACEBOOK_APP_ID", "used_by": "directPublisher.ts", "purpose": "Facebook app ID (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_FACEBOOK_APP_SECRET", "used_by": "directPublisher.ts", "purpose": "Facebook app secret (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_FACEBOOK_PAGE_ACCESS_TOKEN", "used_by": "directPublisher.ts", "purpose": "Facebook page access token (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_FACEBOOK_PAGE_ID", "used_by": "directPublisher.ts", "purpose": "Facebook page ID (BestLife)", "required": false, "scope": "portal" },
+    { "name": "BLA_BLUESKY_HANDLE", "used_by": ".env.example (assist pack reference only)", "purpose": "BlueSky handle for manual posting", "required": false, "scope": "portal" },
+    { "name": "BLA_BLUESKY_APP_PASSWORD", "used_by": ".env.example (assist pack reference only)", "purpose": "BlueSky app password for manual posting", "required": false, "scope": "portal" },
+    { "name": "BLA_INSTAGRAM_BUSINESS_ACCOUNT_ID", "used_by": ".env.example (Phase 2)", "purpose": "Instagram Business Account ID", "required": false, "scope": "portal" },
+    { "name": "BLA_THREADS_APP_ID", "used_by": ".env.example (Phase 2)", "purpose": "Threads app ID", "required": false, "scope": "portal" },
+    { "name": "BLA_THREADS_APP_SECRET", "used_by": ".env.example (Phase 2)", "purpose": "Threads app secret", "required": false, "scope": "portal" },
+    { "name": "BLA_THREADS_ACCESS_TOKEN", "used_by": ".env.example (Phase 2)", "purpose": "Threads access token", "required": false, "scope": "portal" },
+    { "name": "BLA_REDDIT_CLIENT_ID", "used_by": ".env.example (Phase 2)", "purpose": "Reddit OAuth client ID", "required": false, "scope": "portal" },
+    { "name": "BLA_REDDIT_CLIENT_SECRET", "used_by": ".env.example (Phase 2)", "purpose": "Reddit OAuth client secret", "required": false, "scope": "portal" },
+    { "name": "BLA_REDDIT_REFRESH_TOKEN", "used_by": ".env.example (Phase 2)", "purpose": "Reddit OAuth refresh token", "required": false, "scope": "portal" },
+    { "name": "BLA_YOUTUBE_API_KEY", "used_by": ".env.example (Phase 2)", "purpose": "YouTube Data API v3 key", "required": false, "scope": "portal" },
+    { "name": "BLA_YOUTUBE_CHANNEL_ID", "used_by": ".env.example (Phase 2)", "purpose": "YouTube channel ID", "required": false, "scope": "portal" },
+    { "name": "BLA_TIKTOK_CLIENT_KEY", "used_by": ".env.example (Phase 2)", "purpose": "TikTok Content Posting API client key", "required": false, "scope": "portal" },
+    { "name": "BLA_TIKTOK_CLIENT_SECRET", "used_by": ".env.example (Phase 2)", "purpose": "TikTok Content Posting API client secret", "required": false, "scope": "portal" },
+    { "name": "BLA_TIKTOK_ACCESS_TOKEN", "used_by": ".env.example (Phase 2)", "purpose": "TikTok access token", "required": false, "scope": "portal" }
+  ],
+
+  "data_stores": [
+    {
+      "name": "PostgreSQL",
+      "type": "relational_database",
+      "connection": "DATABASE_URL env var",
+      "orm": "Prisma 5.x",
+      "schema": "apps/portal/prisma/schema.prisma",
+      "models": ["User", "Workspace", "Project", "Run", "Artifact", "Asset", "ArtifactAsset", "Approval", "PublishLog", "AgentExecution", "PublishJob"],
+      "migrations": "apps/portal/prisma/migrations/"
+    },
+    {
+      "name": "Local Disk (uploads)",
+      "type": "file_system",
+      "path": "apps/portal/uploads/",
+      "env_var": "UPLOAD_DIR",
+      "structure": {
+        "run_assets": "{projectSlug}/{runId}/{filename}",
+        "project_docs": "{projectSlug}/_project_docs/{filename}",
+        "assist_packs": "{projectSlug}/_publish_jobs/{jobId}.json and .md"
+      }
+    },
+    {
+      "name": "Publish Log JSONL",
+      "type": "append_only_log",
+      "path": "publish-log.jsonl",
+      "written_by": ["publishers/web/wpElementorStaging.js", "publishers/social/zohoSocial.js"],
+      "format": "newline-delimited JSON"
+    },
+    {
+      "name": "Content Items JSONL",
+      "type": "append_only_log",
+      "path": "apps/portal/data/content-items.jsonl",
+      "written_by": "apps/portal/src/lib/contentItemStore.ts",
+      "purpose": "LLIF social content items queued for Zoho bulk CSV export"
+    },
+    {
+      "name": "Target Registry JSON files",
+      "type": "config_files",
+      "path": "targets/",
+      "files": [
+        { "file": "llif-staging.json", "brand": "llif", "type": "web", "env": "staging" },
+        { "file": "bestlife-staging.json", "brand": "bestlife", "type": "web", "env": "staging" },
+        { "file": "llif-social.json", "brand": "llif", "type": "social", "env": "staging" },
+        { "file": "bestlife-social.json", "brand": "bestlife", "type": "social", "env": "production" }
+      ]
+    }
+  ],
+
+  "logs": [
+    {
+      "name": "Publish Log",
+      "path": "publish-log.jsonl",
+      "format": "JSONL",
+      "written_by": "WP publisher + Zoho Social publisher (CLI adapters)",
+      "fields": ["timestamp", "artifact_id", "site_key", "page_slug", "page_id", "status", "link"]
+    },
+    {
+      "name": "Portal PublishLog DB table",
+      "type": "database",
+      "model": "PublishLog",
+      "written_by": "apps/portal/src/app/api/publish/run/[runId]/route.ts",
+      "fields": ["artifactId", "userId", "destination", "result (JSON)", "createdAt"]
+    },
+    {
+      "name": "Agent Execution Log",
+      "type": "database",
+      "model": "AgentExecution",
+      "written_by": "apps/portal/src/app/api/agents/[agentKey]/execute/route.ts",
+      "fields": ["runId", "agentKey", "status", "inputs", "inputFiles", "output", "durationMs", "error"]
+    }
+  ],
+
+  "scripts": [
+    { "command": "npm run start:all", "path": "scripts/start-all.js", "description": "Start all 8 agent servers" },
+    { "command": "npm run start:marketing-compiler", "description": "Start Compiler on port 3000" },
+    { "command": "npm run start:editor", "description": "Start Editor on port 3001" },
+    { "command": "npm run start:site-auditor", "description": "Start Site Auditor on port 3002" },
+    { "command": "npm run start:strategist", "description": "Start Strategist on port 3003" },
+    { "command": "npm run start:distributor", "description": "Start Distributor on port 3004" },
+    { "command": "npm run start:optimizer", "description": "Start Optimizer on port 3005" },
+    { "command": "npm run start:wma", "description": "Start Website Messaging Architect on port 3006" },
+    { "command": "npm run start:renderer", "description": "Start Web Renderer on port 3007" },
+    { "command": "npm run start:portal", "description": "Start Portal dev server on port 4000" },
+    { "command": "npm run publish:dry", "path": "scripts/publish.js", "description": "Dry-run example BestLife homepage publish" },
+    { "command": "npm run check:env", "path": "scripts/check-env.js", "description": "Verify ANTHROPIC_API_KEY + OPENAI_API_KEY" },
+    { "command": "npm test", "description": "Run marketing-artifacts JS tests (node --test)" },
+    { "command": "npx tsx --test __tests__/*.test.ts", "cwd": "apps/portal", "description": "Run Portal TypeScript tests" },
+    { "command": "npm run db:migrate", "cwd": "apps/portal", "description": "Run Prisma migrate dev (interactive)" },
+    { "command": "npm run db:seed", "cwd": "apps/portal", "description": "Seed DB with admin user + example workspaces" },
+    { "command": "npm run db:studio", "cwd": "apps/portal", "description": "Open Prisma Studio GUI" }
+  ],
+
+  "target_registries": [
+    {
+      "site_key": "llif-staging",
+      "brand": "llif",
+      "type": "web",
+      "label": "LLIF – Web Staging",
+      "pages": ["home", "about", "programs", "blog", "contact", "longevity", "membership"],
+      "base_url_env": "WP_LLIF_STAGING_URL"
+    },
+    {
+      "site_key": "bestlife-staging",
+      "brand": "bestlife",
+      "type": "web",
+      "label": "Best Life – Web Staging",
+      "pages": ["homepage", "about", "articles", "contact", "wellness", "subscribe"],
+      "aliases": { "home": "homepage", "index": "homepage" },
+      "base_url_env": "WP_BESTLIFE_STAGING_URL"
+    },
+    {
+      "site_key": "llif-social",
+      "brand": "llif",
+      "type": "social",
+      "label": "LLIF – Social Media",
+      "channels": ["facebook_page", "x_profile", "linkedin_company_page", "instagram_profile", "youtube_channel", "google_business_profile", "bluesky_profile"]
+    },
+    {
+      "site_key": "bestlife-social",
+      "brand": "bestlife",
+      "type": "social",
+      "label": "Best Life – Social Media",
+      "direct_channels": ["x_profile", "linkedin_company_page", "facebook_page"],
+      "assist_channels": ["instagram_profile", "threads_profile", "bluesky_profile", "reddit_community", "youtube_channel", "tiktok_business_profile"]
+    }
+  ]
+}

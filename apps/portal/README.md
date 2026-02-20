@@ -1,5 +1,47 @@
 # Marketing Ops Portal
 
+## Authentication (Google OAuth)
+
+The portal uses **Auth.js v5 (NextAuth)** with Google as the only provider.
+Access is restricted to a hard-coded allowlist of email addresses.
+
+### Roles
+
+| Email | Role | Permissions |
+|-------|------|-------------|
+| bill@llif.org | `admin` | Full rights — no restrictions |
+| jim@llif.org | `approver` | Can edit + approve; cannot publish |
+| jose@llif.org | `publisher` | Can publish approved items; cannot change admin settings |
+
+### Google Cloud Console setup
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → **APIs & Services** → **Credentials**.
+2. Click **Create Credentials** → **OAuth client ID**.
+3. Application type: **Web application**.
+4. Add authorised redirect URI:
+   ```
+   http://localhost:4000/api/auth/callback/google
+   ```
+   For production add your production URL too.
+5. Copy **Client ID** and **Client Secret** into `.env`:
+   ```
+   GOOGLE_CLIENT_ID=<your-client-id>
+   GOOGLE_CLIENT_SECRET=<your-client-secret>
+   NEXTAUTH_SECRET=<output of: openssl rand -base64 32>
+   NEXTAUTH_URL=http://localhost:4000
+   AUTH_ALLOWED_EMAILS=bill@llif.org,jim@llif.org,jose@llif.org
+   ```
+6. Restart the dev server.
+
+### Sign-in flow
+
+- Navigate to `http://localhost:4000` — middleware redirects to `/auth/signin`.
+- Click **Sign in with Google** and authenticate with an allowed Google account.
+- On success, you are redirected to `/workspaces`.
+- On failure (email not in allowlist, unverified account), you land on `/auth/denied`.
+
+---
+
 ## Design-Locked Publishing
 
 Agents output structured JSON conforming to a design contract. The portal validates the contract, selects the correct Elementor template, and publishes to WordPress with structured fields (ACF or meta fallback).

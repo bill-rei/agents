@@ -9,8 +9,8 @@ datasource db {
 
 enum Role {
   admin
-  editor
-  viewer
+  approver
+  publisher
 }
 
 enum RunStatus {
@@ -53,9 +53,11 @@ model User {
   id           String     @id @default(cuid())
   email        String     @unique
   name         String
-  passwordHash String     @map("password_hash")
-  role         Role       @default(editor)
+  image        String?
+  passwordHash String?    @map("password_hash")
+  role         Role       @default(publisher)
   createdAt    DateTime   @default(now()) @map("created_at")
+  lastLoginAt  DateTime?  @map("last_login_at")
 
   runs              Run[]
   approvals         Approval[]

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   }
 
   const user = await db.user.findUnique({ where: { email } });
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  if (!user || !user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 

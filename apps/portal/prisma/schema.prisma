@@ -65,6 +65,9 @@ model User {
   assets            Asset[]
   agentExecutions   AgentExecution[]
   publishJobs       PublishJob[]
+  integrations      Integration[]
+  agentJobs         AgentJob[]
+  canvaAssets       CanvaAsset[]
 
   @@map("users")
 }
@@ -157,6 +160,7 @@ model Artifact {
   publishLogs     PublishLog[]
   artifactAssets  ArtifactAsset[]
   publishJobs     PublishJob[]
+  canvaAssets     CanvaAsset[]
 
   @@index([runId])
   @@index([type])
@@ -261,4 +265,64 @@ model AgentExecution {
   @@index([agentKey])
   @@index([parentExecId])
   @@map("agent_executions")
+}
+
+// ─── Integrations (OAuth providers) ─────────────────────────────────────────
+
+model Integration {
+  id                String    @id @default(cuid())
+  provider          String    @unique              // 'canva'
+  accessToken       String    @map("access_token")
+  refreshToken      String?   @map("refresh_token")
+  expiresAt         DateTime? @map("expires_at")
+  connectedByUserId String    @map("connected_by_user_id")
+  scopes            String[]  @default([])
+  meta              Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  connectedBy  User @relation(fields: [connectedByUserId], references: [id])
+
+  @@map("integrations")
+}
+
+// ─── Generic agent job tracker ───────────────────────────────────────────────
+
+model AgentJob {
+  id              String   @id @default(cuid())
+  type            String                        // 'canva_export'
+  status          String   @default("pending")  // pending|running|completed|failed
+  input           Json     @default("{}")
+  output          Json     @default("{}")
+  error           String?
+  createdByUserId String   @map("created_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  createdBy  User @relation(fields: [createdByUserId], references: [id])
+
+  @@index([type, status])
+  @@map("agent_jobs")
+}
+
+// ─── Canva-generated assets linked to artifacts ──────────────────────────────
+
+model CanvaAsset {
+  id              String   @id @default(cuid())
+  artifactId      String   @map("artifact_id")
+  agentJobId      String?  @map("agent_job_id")
+  type            String   @default("image")
+  provider        String   @default("canva")
+  wpSite          String   @map("wp_site")          // 'llif' | 'bestlife'
+  wpMediaId       Int      @map("wp_media_id")
+  wpUrl           String   @map("wp_url")
+  meta            Json     @default("{}")
+  createdByUserId String   @map("created_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  artifact   Artifact @relation(fields: [artifactId], references: [id])
+  createdBy  User     @relation(fields: [createdByUserId], references: [id])
+
+  @@index([artifactId])
+  @@map("canva_assets")
 }

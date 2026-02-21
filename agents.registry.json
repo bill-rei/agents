@@ -10,5 +10,6 @@
   "marketing-staging-sync": {
     "entry": "./marketing-staging-sync/push-page.mjs",
     "type": "cli"
-  }
+  },
+  "marketing-video-producer": "./marketing-video-producer/server.js"
 }

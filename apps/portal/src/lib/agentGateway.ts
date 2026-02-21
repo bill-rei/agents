@@ -1,5 +1,5 @@
 // ── Agent Gateway ──
-// Server-side bridge between the portal and the 8 agent Express servers.
+// Server-side bridge between the portal and the agent Express servers.
 
 export type FieldType = "text" | "textarea" | "select";
 
@@ -16,9 +16,11 @@ export interface AgentConfig {
   key: string;
   label: string;
   description: string;
+  /** Override base URL (e.g. "http://remote-host"). Falls back to AGENT_HOST env or http://localhost. */
+  baseUrl?: string;
   port: number;
   endpoint: string;
-  pipeline: "campaign" | "web" | "both";
+  pipeline: "campaign" | "web" | "both" | "video";
   pipelineOrder: number;
   inputFields: FieldDef[];
   supportsFiles: boolean;
@@ -165,19 +167,50 @@ export const AGENTS: Record<string, AgentConfig> = {
       { name: "renderProfile", label: "Render Profile", type: "text", required: false },
     ],
   },
+  "marketing-video-producer": {
+    key: "marketing-video-producer",
+    label: "Video Producer",
+    description: "Validates video briefs against safety gates and generates xAI Imagine Video prompts",
+    port: 3008,
+    endpoint: "/api/compile",
+    pipeline: "video",
+    pipelineOrder: 1,
+    supportsFiles: false,
+    inputFields: [
+      { name: "campaign_id", label: "Campaign ID",     type: "text",     required: true  },
+      { name: "brand",       label: "Brand",           type: "select",   required: true,  options: ["llif", "bestlife"] },
+      { name: "brief",       label: "Creative Brief",  type: "textarea", required: true  },
+      { name: "channels",    label: "Channels (JSON)", type: "textarea", required: false },
+      { name: "variants",    label: "Variants (JSON)", type: "textarea", required: true  },
+      { name: "notes",       label: "Notes",           type: "textarea", required: false },
+    ],
+  },
 };
 
 export const AGENT_LIST = Object.values(AGENTS);
 
-export const CAMPAIGN_PIPELINE = AGENT_LIST
-  .filter((a) => a.pipeline === "campaign" || a.pipeline === "both")
-  .sort((a, b) => a.pipelineOrder - b.pipelineOrder);
+/**
+ * Return agents for the given pipeline, sorted by pipelineOrder.
+ * Agents with pipeline "both" appear in every non-"video" pipeline.
+ */
+export function getAgentsByPipeline(pipeline: AgentConfig["pipeline"]): AgentConfig[] {
+  return AGENT_LIST
+    .filter((a) => a.pipeline === pipeline || (pipeline !== "video" && a.pipeline === "both"))
+    .sort((a, b) => a.pipelineOrder - b.pipelineOrder);
+}
 
-export const WEB_PIPELINE = AGENT_LIST
-  .filter((a) => a.pipeline === "web" || a.pipeline === "both")
-  .sort((a, b) => a.pipelineOrder - b.pipelineOrder);
+// Backward-compatible named exports — derived from the helper.
+export const CAMPAIGN_PIPELINE = getAgentsByPipeline("campaign");
+export const WEB_PIPELINE = getAgentsByPipeline("web");
 
-// ── Execute an agent ──
+// ── URL builder ──────────────────────────────────────────────────────────────
+
+function agentBaseUrl(agent: AgentConfig): string {
+  const host = agent.baseUrl ?? process.env.AGENT_HOST ?? "http://localhost";
+  return `${host.replace(/\/$/, "")}:${agent.port}`;
+}
+
+// ── Execute an agent ──────────────────────────────────────────────────────────
 
 export interface ExecuteResult {
   ok: boolean;
@@ -200,7 +233,7 @@ export async function executeAgent(
   const agent = AGENTS[agentKey];
   if (!agent) throw new Error(`Unknown agent: ${agentKey}`);
 
-  const url = `http://localhost:${agent.port}${agent.endpoint}`;
+  const url = `${agentBaseUrl(agent)}${agent.endpoint}`;
   const startTime = Date.now();
 
   try {
@@ -209,11 +242,9 @@ export async function executeAgent(
     if (files && files.length > 0 && agent.supportsFiles) {
       // Send as multipart FormData when files are present
       const formData = new FormData();
-      // Add each input field
       for (const [key, value] of Object.entries(inputs)) {
         if (value) formData.append(key, value);
       }
-      // Add files
       for (const file of files) {
         const uint8 = new Uint8Array(file.buffer);
         const blob = new Blob([uint8], { type: file.mimeType });
@@ -221,7 +252,6 @@ export async function executeAgent(
       }
       response = await fetch(url, { method: "POST", body: formData });
     } else {
-      // Standard JSON request
       response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -257,7 +287,7 @@ export async function executeAgent(
   }
 }
 
-// ── Health check ──
+// ── Health check ─────────────────────────────────────────────────────────────
 
 export async function checkAgentHealth(): Promise<Record<string, boolean>> {
   const results: Record<string, boolean> = {};
@@ -265,7 +295,7 @@ export async function checkAgentHealth(): Promise<Record<string, boolean>> {
   await Promise.allSettled(
     AGENT_LIST.map(async (agent) => {
       try {
-        const res = await fetch(`http://localhost:${agent.port}/`, {
+        const res = await fetch(`${agentBaseUrl(agent)}/`, {
           signal: AbortSignal.timeout(2000),
         });
         results[agent.key] = res.ok || res.status === 404; // Express returns 404 for GET / but that means it's alive

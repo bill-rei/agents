@@ -5,6 +5,7 @@ import { mapToMarketingArtifact, deriveDestination } from "@/lib/artifactMapper"
 import { publishViaCli } from "@/lib/publishBridge";
 import { createContentItem } from "@/lib/contentItemStore";
 import { publishDesignLockedPage } from "@/lib/wp/publishDesignLockedPage";
+import { getWpCredentials, basicAuthHeader, getPageIdBySlug, updatePage } from "@/lib/wp/wpClient";
 import { getTargetsForArtifactType, getTargetType, deriveBrandFromTarget } from "@/lib/targetRegistry";
 import type { TargetRegistry } from "@/lib/targetRegistry";
 import { runBestLifeSocialJob } from "@/lib/publishers/bestlife";
@@ -50,6 +51,23 @@ export async function POST(
     const project = artifact.run.project;
     const metadata = (artifact.metadata as Record<string, unknown>) || {};
 
+    // Fetch any video assets generated for this artifact (with a WP URL)
+    const videoAssets = await db.videoAsset.findMany({
+      where: { artifactId: artifact.id, wpUrl: { not: null } },
+      select: { variantId: true, aspectRatio: true, durationSeconds: true, wpUrl: true, wpMediaId: true, brand: true },
+    });
+    // Serialised value stored under WP meta key llif_videos
+    const llifVideosMeta = videoAssets.length > 0
+      ? JSON.stringify(videoAssets.map((v) => ({
+          variant_id: v.variantId,
+          aspect_ratio: v.aspectRatio,
+          duration_seconds: v.durationSeconds,
+          wp_url: v.wpUrl,
+          wp_media_id: v.wpMediaId,
+          brand: v.brand,
+        })))
+      : undefined;
+
     // Resolve target keys — prefer new array field, fall back to legacy single key
     const targetKeys = project.targetRegistryKeys.length > 0
       ? project.targetRegistryKeys
@@ -73,7 +91,7 @@ export async function POST(
         const result = await publishSocialPost(artifact, brand, dryRun, user.id);
         results.push(result);
       } else {
-        const result = await publishWebArtifact(artifact, siteKey, brand, metadata, dryRun, user.id);
+        const result = await publishWebArtifact(artifact, siteKey, brand, metadata, dryRun, user.id, llifVideosMeta);
         results.push(result);
       }
       continue;
@@ -92,7 +110,7 @@ export async function POST(
         results.push(result);
       } else if (targetType === "web") {
         const result = await publishWebArtifact(
-          artifact, target.site_key, brand, metadata, dryRun, user.id
+          artifact, target.site_key, brand, metadata, dryRun, user.id, llifVideosMeta
         );
         if (!result.ok) allOk = false;
         results.push(result);
@@ -296,11 +314,13 @@ async function publishWebArtifact(
   metadata: Record<string, unknown>,
   dryRun: boolean,
   userId: string,
+  /** JSON-serialised llif_videos array to store as WP meta. Omitted when no videos exist. */
+  llifVideosMeta?: string,
 ): Promise<Record<string, unknown>> {
   // Check if this artifact uses the design-locked structured format
   const contentFormat = metadata.content_format;
   if (artifact.type === "web_page" && contentFormat === "structured") {
-    return publishDesignLocked(artifact, dryRun, userId);
+    return publishDesignLocked(artifact, dryRun, userId, llifVideosMeta);
   }
 
   // Standard web/blog publish via CLI
@@ -344,6 +364,16 @@ async function publishWebArtifact(
       imageUrls,
     });
     contentItemId = contentItem.id;
+
+    // Best-effort: patch llif_videos into WP meta after the page is live
+    if (llifVideosMeta) {
+      const slug = (target.slug || target.page_key) as string | undefined;
+      if (slug) {
+        await patchWpVideoMeta(brand, slug, llifVideosMeta).catch((err: unknown) => {
+          console.warn(`[publish] llif_videos WP meta patch failed for slug "${slug}":`, err);
+        });
+      }
+    }
   }
 
   return {
@@ -364,6 +394,7 @@ async function publishDesignLocked(
   artifact: { id: string; title: string; content: string; target: unknown },
   dryRun: boolean,
   userId: string,
+  llifVideosMeta?: string,
 ): Promise<Record<string, unknown>> {
   try {
     const target = (artifact.target as Record<string, unknown>) || {};
@@ -406,6 +437,7 @@ async function publishDesignLocked(
       title: artifact.title,
       artifact: structuredContent,
       status: "draft",
+      ...(llifVideosMeta ? { additionalMeta: { llif_videos: llifVideosMeta } } : {}),
     });
 
     await db.publishLog.create({
@@ -487,4 +519,17 @@ function buildImageUrls(
   return artifactAssets
     .filter((aa) => aa.asset.mimeType.startsWith("image/"))
     .map((aa) => `${PORTAL_PUBLIC_URL}/api/assets/${aa.asset.id}`);
+}
+
+async function patchWpVideoMeta(
+  brand: "LLIF" | "BestLife",
+  slug: string,
+  llifVideosMeta: string,
+): Promise<void> {
+  const wpBrand = brand === "LLIF" ? "llif" : "bestlife";
+  const creds = getWpCredentials(wpBrand);
+  const auth = basicAuthHeader(creds.username, creds.appPassword);
+  const pageId = await getPageIdBySlug(creds.baseUrl, auth, slug);
+  if (!pageId) return;
+  await updatePage(creds.baseUrl, auth, pageId, { meta: { llif_videos: llifVideosMeta } });
 }

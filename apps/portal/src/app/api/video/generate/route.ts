@@ -18,14 +18,16 @@ import path from "path";
 import fs from "fs";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { AGENTS } from "@/lib/agentGateway";
 import { createVideoJob, pollVideoReady, downloadVideo } from "@/lib/video/xaiVideoClient";
 import { uploadWpMedia } from "@/lib/wp/wpMediaUpload";
 import type { Brand } from "@/lib/designContract/schema";
 
 export const runtime = "nodejs";
 
-const VIDEO_PRODUCER_PORT = process.env.VIDEO_PRODUCER_PORT || "3008";
-const VIDEO_PRODUCER_URL = `http://localhost:${VIDEO_PRODUCER_PORT}/api/compile`;
+const _videoAgent = AGENTS["marketing-video-producer"];
+const _agentHost = _videoAgent.baseUrl ?? process.env.AGENT_HOST ?? "http://localhost";
+const VIDEO_PRODUCER_URL = `${_agentHost.replace(/\/$/, "")}:${_videoAgent.port}${_videoAgent.endpoint}`;
 
 type AspectRatio = "9:16" | "16:9" | "1:1";
 

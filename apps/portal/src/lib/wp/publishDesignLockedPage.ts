@@ -141,6 +141,8 @@ export interface PublishDesignLockedInput {
   title?: string;
   artifact: unknown;
   status?: "draft" | "publish";
+  /** Extra WP meta fields merged alongside the design-contract meta (e.g. { llif_videos: "..." }). */
+  additionalMeta?: Record<string, unknown>;
 }
 
 export interface PublishDesignLockedResult {
@@ -193,19 +195,21 @@ export async function publishDesignLockedPage(
     template_slug: `${brand}-${campaign_type}`,
   };
 
+  const extraMeta = input.additionalMeta ?? {};
+
   if (pageId === null) {
     // Create new page
     const payload: Record<string, unknown> = {
       title: pageTitle,
       slug: input.slug,
       status: pageStatus,
-      meta: elementorMeta,
+      meta: { ...elementorMeta, ...extraMeta },
     };
 
     if (acfAvailable) {
       payload.acf = buildAcfFields(data);
     } else {
-      payload.meta = { ...elementorMeta, ...buildMetaFields(data) };
+      payload.meta = { ...elementorMeta, ...buildMetaFields(data), ...extraMeta };
       payload.content = buildFallbackHtml(data);
     }
 
@@ -240,13 +244,13 @@ export async function publishDesignLockedPage(
   const patch: Record<string, unknown> = {
     title: pageTitle,
     status: pageStatus,
-    meta: elementorMeta,
+    meta: { ...elementorMeta, ...extraMeta },
   };
 
   if (acfAvailable) {
     patch.acf = buildAcfFields(data);
   } else {
-    patch.meta = { ...elementorMeta, ...buildMetaFields(data) };
+    patch.meta = { ...elementorMeta, ...buildMetaFields(data), ...extraMeta };
     patch.content = buildFallbackHtml(data);
   }
 

@@ -16,7 +16,9 @@ function basicAuthHeader(username, appPassword) {
 }
 
 async function getPageIdBySlug(baseUrl, authHeader, slug) {
-  const url = `${baseUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}`;
+  // status=any ensures draft/private/pending pages are included —
+  // staging sites typically leave pages as drafts.
+  const url = `${baseUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}&status=any&per_page=1`;
   const res = await fetch(url, {
     headers: { Authorization: authHeader, Accept: "application/json" },
   });

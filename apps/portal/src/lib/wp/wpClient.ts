@@ -59,7 +59,9 @@ export async function getPageIdBySlug(
   auth: string,
   slug: string
 ): Promise<number | null> {
-  const url = `${baseUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}&per_page=1`;
+  // status=any ensures draft/private/pending pages are included —
+  // staging sites typically leave pages as drafts.
+  const url = `${baseUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}&status=any&per_page=1`;
   const res = await fetch(url, {
     headers: { Authorization: auth, Accept: "application/json" },
   });

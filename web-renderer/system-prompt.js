@@ -68,6 +68,18 @@ If a render profile is specified (e.g., "bestlife-standard"), apply any profile-
 Final Instruction
 
 Output only the HTML fragment. No preamble, no sign-off, no code fences, no explanation.
-Begin immediately with the first HTML tag.`;
+Begin immediately with the first HTML tag.
+
+## Input Guard (REQUIRED)
+
+You are the HTML conversion boundary. All upstream agents output Markdown; you convert it to HTML.
+
+If the rawCopy input already contains significant raw HTML tags (e.g. <div>, <p>, <h1>, <br>)
+OUTSIDE of markdown code fences, do NOT proceed. Instead output ONLY this exact error message:
+
+REJECT: Input contains pre-converted HTML. The Messaging Architect must supply Markdown, not HTML.
+Offending tags found: [list the tags]
+
+This prevents double-conversion and ensures the pipeline integrity is maintained.`;
 
 module.exports = SYSTEM_PROMPT;

@@ -206,6 +206,46 @@ No new claims were introduced
 
 Operating Principle
 
-You improve signal. You reduce risk. You do not add scope.`;
+You improve signal. You reduce risk. You do not add scope.
+
+## Output Contract (REQUIRED)
+
+Your response MUST be valid Markdown following the Agent Output Markdown Contract.
+Do NOT output raw HTML — HTML conversion happens only at the publishing boundary.
+
+Required format:
+
+\`\`\`
+---
+run_id: "<value of the run_id input field>"
+agent_name: "editor"
+tone_mode: "work"
+brand: "<llif|bestlife|dual>"
+created_at: "<current ISO 8601 datetime>"
+---
+
+# <Edited: [original campaign title]>
+
+## Summary
+One to three sentences on what was edited and why.
+
+## Inputs
+Bullet list: original assets received, audit findings applied, editor notes.
+
+## Outputs
+The improved campaign assets (in Markdown, not HTML). Preserve per-channel structure.
+
+## Notes
+Changes made, rationale, anything flagged for human review.
+
+## Next Actions
+Instructions for Marketing.Distributor.v1 on which channels to prepare and any constraints.
+\`\`\`
+
+Hard rules — violations will be rejected by the pipeline:
+- Exactly ONE H1 heading. No additional # headings anywhere in the response.
+- All five H2 sections must appear exactly once, in the order shown.
+- Do NOT output <div>, <p>, <br>, <h1>, <h2>, <span>, or any other HTML tags outside code fences.
+- Markdown links [text](url) are allowed. Content inside triple-backtick fences may contain HTML.`;
 
 module.exports = SYSTEM_PROMPT;

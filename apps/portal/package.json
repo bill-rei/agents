@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start --port 4000",
     "lint": "next lint",
+    "test": "npx tsx --test '__tests__/**/*.test.ts'",
+    "test:unit": "npx tsx --test '__tests__/agentOutput.test.ts'",
+    "test:integration": "npx tsx --test '__tests__/runSteps.test.ts'",
     "db:migrate": "prisma migrate dev",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:studio": "prisma studio"
@@ -17,6 +20,7 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "jszip": "^3.10.1",
+    "marked": "^15.0.12",
     "next": "^14.2.0",
     "next-auth": "^5.0.0-beta.30",
     "react": "^18.3.1",

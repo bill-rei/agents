@@ -114,6 +114,7 @@ model Run {
   artifacts         Artifact[]
   assets            Asset[]
   agentExecutions   AgentExecution[]
+  runSteps          RunStep[]
 
   @@index([projectId])
   @@map("runs")
@@ -262,11 +263,38 @@ model AgentExecution {
   createdBy    User             @relation(fields: [createdByUserId], references: [id])
   parentExec   AgentExecution?  @relation("ExecLineage", fields: [parentExecId], references: [id])
   childExecs   AgentExecution[] @relation("ExecLineage")
+  runStep      RunStep?
 
   @@index([runId])
   @@index([agentKey])
   @@index([parentExecId])
   @@map("agent_executions")
+}
+
+// ─── Per-step agent output storage ───────────────────────────────────────────
+
+model RunStep {
+  id                 String   @id @default(cuid())
+  runId              String   @map("run_id")
+  step               String   // agentKey: strategist|marketing-compiler|editor|...
+  agentExecutionId   String?  @unique @map("agent_execution_id")
+  status             String   @default("pending") // ok|invalid|error|pending
+  markdownOutput     String?  @map("markdown_output") @db.Text
+  jsonPayload        Json     @default("{}") @map("json_payload")
+  validationErrors   String[] @default([]) @map("validation_errors")
+  validationWarnings String[] @default([]) @map("validation_warnings")
+  inputStepId        String?  @map("input_step_id")
+  hash               String?  // sha256[:16] of markdownOutput for diffing
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  run            Run             @relation(fields: [runId], references: [id])
+  agentExecution AgentExecution? @relation(fields: [agentExecutionId], references: [id])
+  inputStep      RunStep?        @relation("StepChain", fields: [inputStepId], references: [id])
+  outputSteps    RunStep[]       @relation("StepChain")
+
+  @@index([runId])
+  @@index([step])
+  @@map("run_steps")
 }
 
 // ─── Integrations (OAuth providers) ─────────────────────────────────────────

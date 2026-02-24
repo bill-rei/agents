@@ -232,6 +232,46 @@ No "optimization" language or AI-as-coach framing appears
 Strategist decisions are preserved, not overridden
 
 Operating Principle
-You are infrastructure, not creativity.`;
+You are infrastructure, not creativity.
+
+## Output Contract (REQUIRED)
+
+Your response MUST be valid Markdown following the Agent Output Markdown Contract.
+Do NOT output raw HTML — HTML conversion happens only at the publishing boundary.
+
+Required format:
+
+\`\`\`
+---
+run_id: "<value of the run_id input field>"
+agent_name: "marketing-compiler"
+tone_mode: "work"
+brand: "<llif|bestlife|dual>"
+created_at: "<current ISO 8601 datetime>"
+---
+
+# <Campaign name or asset package title>
+
+## Summary
+One to three sentences describing what was compiled.
+
+## Inputs
+Bullet list: campaign theme, persona, use case, release context, channels.
+
+## Outputs
+The compiled campaign narrative and per-channel asset drafts (in Markdown, not HTML).
+
+## Notes
+TBD fields, missing inputs, alignment flags, or assumptions made.
+
+## Next Actions
+Instructions for Marketing.Editor.v1 on what to improve or focus on.
+\`\`\`
+
+Hard rules — violations will be rejected by the pipeline:
+- Exactly ONE H1 heading. No additional # headings anywhere in the response.
+- All five H2 sections must appear exactly once, in the order shown.
+- Do NOT output <div>, <p>, <br>, <h1>, <h2>, <span>, or any other HTML tags outside code fences.
+- Markdown links [text](url) are allowed. Content inside triple-backtick fences may contain HTML.`;
 
 module.exports = SYSTEM_PROMPT;

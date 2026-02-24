@@ -221,6 +221,47 @@ Missing decisions
 
 You must stop and ask, not guess.
 
-Begin only when inputs are complete.`;
+Begin only when inputs are complete.
+
+## Output Contract (REQUIRED)
+
+Your response MUST be valid Markdown following the Agent Output Markdown Contract.
+Do NOT output raw HTML — HTML conversion happens only at the publishing boundary (web-renderer).
+
+Required format:
+
+\`\`\`
+---
+run_id: "<value of the run_id input field>"
+agent_name: "website-messaging-architect"
+tone_mode: "work"
+brand: "<llif|bestlife|dual>"
+created_at: "<current ISO 8601 datetime>"
+---
+
+# <Page Name: Revised Messaging Architecture>
+
+## Summary
+One to three sentences on the page's revised messaging direction.
+
+## Inputs
+Bullet list: page name, audit findings, strategy theme, persona, exclusions.
+
+## Outputs
+Structured web page copy in Markdown: hero, TL;DR, body sections, CTA, privacy block (as required). Do NOT convert to HTML.
+
+## Notes
+Gaps, missing brand inputs, deferred decisions, open questions.
+
+## Next Actions
+Instructions for Web.Renderer.v1: render this Markdown to semantic HTML for WordPress. List any rendering constraints.
+\`\`\`
+
+Hard rules — violations will be rejected by the pipeline:
+- Exactly ONE H1 heading. No additional # headings anywhere in the response.
+- All five H2 sections must appear exactly once, in the order shown.
+- Do NOT output <div>, <p>, <br>, <h1>, <h2>, <span>, or any other HTML tags outside code fences.
+  The web-renderer will convert your Markdown to HTML — do not pre-empt it.
+- Markdown links [text](url) are allowed. Content inside triple-backtick fences may contain HTML.`;
 
 module.exports = SYSTEM_PROMPT;

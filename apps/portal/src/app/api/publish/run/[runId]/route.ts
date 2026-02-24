@@ -45,6 +45,30 @@ export async function POST(
     return NextResponse.json({ error: "No approved artifacts to publish" }, { status: 400 });
   }
 
+  // ── Social approval gate ────────────────────────────────────────────────────
+  // If the social preview workflow has been started and there are outstanding
+  // change requests, block publishing until they are resolved.
+  const socialApproval = await db.socialApproval.findUnique({
+    where: { runId },
+    select: { overall: true, channels: true },
+  });
+  if (socialApproval && socialApproval.overall === "needs_changes") {
+    const blocked = Object.entries(
+      socialApproval.channels as Record<string, { status: string }>
+    )
+      .filter(([, ch]) => ch.status === "changes_requested")
+      .map(([p]) => p)
+      .join(", ");
+    return NextResponse.json(
+      {
+        error: `Publish blocked: social preview has outstanding change requests on ${blocked}. Resolve them in Preview & Approve before publishing.`,
+        socialApprovalStatus: socialApproval.overall,
+      },
+      { status: 422 }
+    );
+  }
+  // ── End social approval gate ────────────────────────────────────────────────
+
   const results: Record<string, unknown>[] = [];
 
   for (const artifact of artifacts) {

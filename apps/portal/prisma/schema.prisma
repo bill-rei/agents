@@ -115,6 +115,7 @@ model Run {
   assets            Asset[]
   agentExecutions   AgentExecution[]
   runSteps          RunStep[]
+  socialApproval    SocialApproval?
 
   @@index([projectId])
   @@map("runs")
@@ -382,4 +383,24 @@ model CanvaAsset {
 
   @@index([artifactId])
   @@map("canva_assets")
+}
+
+// ─── Social preview approval state (run-level, per-channel) ──────────────────
+
+model SocialApproval {
+  id        String   @id @default(cuid())
+  runId     String   @unique @map("run_id")
+  brand     String   @default("")
+  /// overall status: pending | partial | approved_all | needs_changes
+  overall   String   @default("pending")
+  /// JSON: Record<platform, ChannelApprovalState>
+  channels  Json     @default("{}")
+  /// JSON: append-only ApprovalEvent[]
+  history   Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  run Run @relation(fields: [runId], references: [id])
+
+  @@map("social_approvals")
 }

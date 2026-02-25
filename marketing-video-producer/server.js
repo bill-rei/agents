@@ -94,7 +94,7 @@ app.post('/api/compile', async (req, res) => {
     ].join('\n');
 
     // ── Call LLM (safety check + prompt generation) ────────────────────────────
-    const rawResult = await compile(userMessage, SYSTEM_PROMPT);
+    const rawResult = await compile(userMessage, SYSTEM_PROMPT, { provider: req.query.provider });
 
     // ── Parse and validate the LLM response ───────────────────────────────────
     let plan;

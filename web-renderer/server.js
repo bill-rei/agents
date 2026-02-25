@@ -31,7 +31,7 @@ app.post('/api/compile', async (req, res) => {
     }
 
     const userMessage = parts.join('\n');
-    let html = await compile(userMessage, SYSTEM_PROMPT);
+    let html = await compile(userMessage, SYSTEM_PROMPT, { provider: req.query.provider });
 
     // Strip code fences if the LLM wrapped the output
     html = html.trim();

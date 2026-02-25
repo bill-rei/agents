@@ -7,6 +7,7 @@ import { AGENTS, executeAgent } from "@/lib/agentGateway";
 import type { FileAttachment } from "@/lib/agentGateway";
 import { getFilePath } from "@/lib/storage";
 import { validateAgentOutputMarkdown } from "@/lib/agentOutput/validate";
+import { validateProviderId, getProvider } from "@/lib/llmProviders";
 
 export async function POST(
   req: NextRequest,
@@ -26,10 +27,30 @@ export async function POST(
   }
 
   const body = await req.json();
-  const { runId, inputs, parentExecId } = body;
+  const { runId, inputs, parentExecId, providerId, attemptNumber } = body;
 
   if (!runId) {
     return NextResponse.json({ error: "runId is required" }, { status: 400 });
+  }
+
+  // Validate provider if specified
+  if (providerId !== undefined && providerId !== "") {
+    if (!validateProviderId(providerId)) {
+      return NextResponse.json(
+        { errorCode: "UNKNOWN_PROVIDER", error: `Unknown provider: "${providerId}". Use anthropic, openai, or grok.` },
+        { status: 400 }
+      );
+    }
+    const prov = getProvider(providerId);
+    if (!prov?.available) {
+      return NextResponse.json(
+        {
+          errorCode: "PROVIDER_NOT_CONFIGURED",
+          error: `${prov?.displayName} is not configured. Set ${prov?.apiKeyEnvVar} in the environment.`,
+        },
+        { status: 400 }
+      );
+    }
   }
 
   // Verify run exists and get project info
@@ -64,13 +85,20 @@ export async function POST(
     scope: "project",
   }));
 
+  // Enrich inputs with provider + attempt metadata (persisted for history badges)
+  const enrichedInputs = {
+    ...(inputs || {}),
+    ...(providerId ? { _providerId: providerId } : {}),
+    ...(attemptNumber && Number(attemptNumber) > 1 ? { _attemptNumber: String(attemptNumber) } : {}),
+  };
+
   // Create execution record (pending)
   const exec = await db.agentExecution.create({
     data: {
       runId,
       agentKey,
       status: "pending",
-      inputs: inputs || {},
+      inputs: enrichedInputs,
       inputFiles: inputFilesMeta,
       parentExecId: parentExecId || null,
       createdByUserId: user.id,
@@ -84,10 +112,12 @@ export async function POST(
   });
 
   // Always inject run_id so agents can include it in their Markdown frontmatter
-  const agentInputs = { ...(inputs || {}), run_id: runId };
+  const agentInputs = { ...enrichedInputs, run_id: runId };
 
   // Call the agent — include project docs as file attachments
-  const result = await executeAgent(agentKey, agentInputs, files);
+  const result = await executeAgent(agentKey, agentInputs, files, {
+    providerId: providerId || undefined,
+  });
 
   // Update AgentExecution with result
   const updated = await db.agentExecution.update({

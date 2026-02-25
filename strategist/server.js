@@ -72,7 +72,7 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
     }
 
     const userMessage = parts.join('\n\n');
-    const result = await compile(userMessage, SYSTEM_PROMPT);
+    const result = await compile(userMessage, SYSTEM_PROMPT, { provider: req.query.provider });
 
     res.json({ result });
   } catch (err) {

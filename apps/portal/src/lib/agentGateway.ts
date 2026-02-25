@@ -230,12 +230,16 @@ export interface FileAttachment {
 export async function executeAgent(
   agentKey: string,
   inputs: Record<string, string>,
-  files?: FileAttachment[]
+  files?: FileAttachment[],
+  opts?: { providerId?: string }
 ): Promise<ExecuteResult> {
   const agent = AGENTS[agentKey];
   if (!agent) throw new Error(`Unknown agent: ${agentKey}`);
 
-  const url = `${agentBaseUrl(agent)}${agent.endpoint}`;
+  const providerParam = opts?.providerId
+    ? `?provider=${encodeURIComponent(opts.providerId)}`
+    : "";
+  const url = `${agentBaseUrl(agent)}${agent.endpoint}${providerParam}`;
   const startTime = Date.now();
 
   try {

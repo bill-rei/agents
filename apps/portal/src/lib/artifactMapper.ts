@@ -1,5 +1,6 @@
 import type { Artifact, Run, Project, Asset, ArtifactAsset } from "@prisma/client";
 import { getFilePath } from "@/lib/storage";
+import { extractWebPageBody } from "@/lib/content/extractWebPageBody";
 
 type ArtifactAssetWithAsset = ArtifactAsset & { asset: Asset };
 
@@ -29,6 +30,24 @@ export function mapToMarketingArtifact(dbArtifact: ArtifactWithRun, overrideSite
     contentObj = JSON.parse(dbArtifact.content);
   } catch {
     contentObj = { body: dbArtifact.content };
+  }
+
+  // For web_page artifacts, extract and normalise the publishable HTML body.
+  // This handles three formats that agents may produce:
+  //   1) Raw HTML/markdown pasted directly (normalises literal \n sequences).
+  //   2) JSON with a top-level "html" or "body" field.
+  //   3) JSON with a "pages" array containing "body_html" or "body_markdown"
+  //      (the format produced by several LLM content agents).
+  if (dbArtifact.type === "web_page") {
+    const selectedSlug = (dbTarget.slug as string) || undefined;
+    const extracted = extractWebPageBody(dbArtifact.content, { selectedSlug });
+    if (extracted.warnings?.length) {
+      console.warn("[artifactMapper] web_page HTML extraction:", extracted.warnings);
+    }
+    // Override contentObj.html so buildContent() uses the extracted body.
+    if (extracted.detected !== "unknown" || extracted.body) {
+      contentObj = { ...contentObj, html: extracted.body };
+    }
   }
 
   // Build type-specific target with required fields

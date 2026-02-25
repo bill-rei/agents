@@ -5,16 +5,16 @@
  * Currently supports WordPress web targets only.
  * Squarespace and other providers are stubbed for future extension.
  *
- * Credentials are resolved from environment variables using the same
- * naming convention as the publish CLI (wpElementorStaging.js):
- *   WP_{SITE_KEY}_URL, WP_{SITE_KEY}_USER, WP_{SITE_KEY}_APP_PASSWORD
+ * Credentials are resolved via getWpCredentials(brand) which reads
+ * the portal's env vars: LLIF_WP_BASE_URL / LLIF_WP_USERNAME / LLIF_WP_APP_PASSWORD
+ * (or BLA_WP_* equivalents for BestLife). No credentials in the root agents/.env are needed.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { loadRegistry, getTargetType } from "@/lib/targetRegistry";
-import type { WebRegistry } from "@/lib/targetRegistry";
+import { loadRegistry, getTargetType, deriveBrandFromTarget } from "@/lib/targetRegistry";
 import { listPages } from "@/lib/cms/pageDiscovery";
+import { getWpCredentials } from "@/lib/wp/wpClient";
 
 export async function GET(
   _req: NextRequest,
@@ -46,33 +46,24 @@ export async function GET(
     );
   }
 
-  const webReg = reg as WebRegistry;
-
-  // Resolve base URL from the env var named in the registry JSON
-  const baseUrl = process.env[webReg.base_url_env];
-  if (!baseUrl) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: `Environment variable "${webReg.base_url_env}" is not set for target "${targetId}"`,
-      },
-      { status: 500 }
-    );
+  // Resolve credentials via the portal's brand-based env var convention:
+  //   LLIF_WP_BASE_URL / LLIF_WP_USERNAME / LLIF_WP_APP_PASSWORD
+  //   BLA_WP_BASE_URL  / BLA_WP_USERNAME  / BLA_WP_APP_PASSWORD
+  const brand = deriveBrandFromTarget(reg);
+  let creds: { baseUrl: string; username: string; appPassword: string };
+  try {
+    creds = getWpCredentials(brand as "llif" | "bestlife");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-
-  // Resolve credentials using the same prefix pattern as wpElementorStaging.js:
-  //   WP_{SITE_KEY_UPPERCASED_UNDERSCORED}_USER
-  //   WP_{SITE_KEY_UPPERCASED_UNDERSCORED}_APP_PASSWORD
-  const prefix = `WP_${targetId.toUpperCase().replace(/-/g, "_")}`;
-  const username = process.env[`${prefix}_USER`] || undefined;
-  const appPassword = process.env[`${prefix}_APP_PASSWORD`] || undefined;
 
   try {
     const pages = await listPages({
       provider: "wordpress",
-      baseUrl: baseUrl.replace(/\/$/, ""),
-      username,
-      appPassword,
+      baseUrl: creds.baseUrl,
+      username: creds.username,
+      appPassword: creds.appPassword,
     });
 
     return NextResponse.json({ ok: true, pages });

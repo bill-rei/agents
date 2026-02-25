@@ -181,6 +181,8 @@ function truncateContent(content, pageCount) {
 app.post('/api/compile', upload.array('files'), async (req, res) => {
   try {
     const {
+      // Explicit mode override (from portal toggle)
+      auditMode,
       // Full site audit fields
       domain,
       pageUrls,
@@ -216,15 +218,19 @@ app.post('/api/compile', upload.array('files'), async (req, res) => {
       refFileText = parsed.join('\n');
     }
 
-    // Determine audit mode: full site vs single page
+    // Determine audit mode: full site vs single page.
+    // pageUrls may be newline- or comma-separated (portal sends comma, direct UI sends newline).
     const urlList = pageUrls
-      ? pageUrls.split('\n').map((u) => u.trim()).filter(Boolean)
+      ? pageUrls.split(/[\n,]/).map((u) => u.trim()).filter(Boolean)
       : [];
     const excludeList = excludeUrls
-      ? excludeUrls.split('\n').map((u) => u.trim()).filter(Boolean)
+      ? excludeUrls.split(/[\n,]/).map((u) => u.trim()).filter(Boolean)
       : [];
 
-    const isFullSite = !!(domain || urlList.length);
+    // auditMode === 'single_page' takes priority; otherwise infer from fields present.
+    const isFullSite = auditMode === 'single_page'
+      ? false
+      : !!(domain || urlList.length);
     const parts = [];
 
     if (isFullSite) {

@@ -125,8 +125,10 @@ export const AGENTS: Record<string, AgentConfig> = {
     pipelineOrder: 2,
     supportsFiles: true,
     inputFields: [
-      { name: "domain", label: "Domain", type: "text", required: false },
-      { name: "pageUrls", label: "Page URLs (comma-separated)", type: "textarea", required: false },
+      { name: "auditMode", label: "Audit Mode", type: "select", required: false, options: ["full_site", "single_page"] },
+      { name: "pageUrl", label: "Single Page URL (single_page mode)", type: "text", required: false },
+      { name: "domain", label: "Domain (full_site mode — auto-discovers pages)", type: "text", required: false },
+      { name: "pageUrls", label: "Page URLs, one per line (full_site mode)", type: "textarea", required: false },
       { name: "audienceSegments", label: "Audience Segments", type: "textarea", required: false },
       { name: "notes", label: "Operator Notes", type: "textarea", required: false },
       { name: "referenceDocs", label: "Reference Docs", type: "textarea", required: false },

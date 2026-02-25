@@ -10,6 +10,157 @@ import {
 } from "../src/lib/wp/websiteJob";
 import type { WebJobPage, PagePublishResult } from "../src/lib/wp/websiteJob";
 
+import { normalizeWebRendererOutput } from "../src/lib/wp/normalizeRendererOutput";
+
+// ── normalizeWebRendererOutput ────────────────────────────────────────────────
+
+describe("normalizeWebRendererOutput", () => {
+  // Helper: build a wrapped web_page artifact
+  function makeWrapped(innerPages: unknown[]): string {
+    const inner = JSON.stringify({
+      brand: "LLIF",
+      content_format: "html",
+      pages: innerPages,
+    });
+    return JSON.stringify({
+      artifact_type: "web_page",
+      content_format: "html",
+      content: {
+        title: "LLIF Website Update",
+        html: `json\n${inner}`,
+      },
+    });
+  }
+
+  const fivePages = [
+    { slug: "homepage", title: "Homepage", body_html: "<h1>Home</h1>" },
+    { slug: "about-llif", title: "About LLIF", body_html: "<h1>About</h1>" },
+    { slug: "how-it-works", title: "How It Works", body_html: "<h1>How</h1>" },
+    { slug: "privacy-governance", title: "Privacy & Governance", body_html: "<h1>Privacy</h1>" },
+    { slug: "research-platform", title: "Research Platform", body_html: "<h1>Research</h1>" },
+  ];
+
+  it("extracts 5 pages from wrapped format with json\\n prefix", () => {
+    const input = makeWrapped(fivePages);
+    const result = normalizeWebRendererOutput(input);
+
+    assert.strictEqual(result.source.kind, "wrapped");
+    assert.strictEqual(result.source.embedded_detected, true);
+    assert.strictEqual(result.pages.length, 5);
+
+    const slugs = result.pages.map((p) => p.slug);
+    assert.deepStrictEqual(slugs, [
+      "homepage",
+      "about-llif",
+      "how-it-works",
+      "privacy-governance",
+      "research-platform",
+    ]);
+
+    assert.strictEqual(result.brand, "LLIF");
+  });
+
+  it("extracts pages from wrapped format with ```json code fence", () => {
+    const inner = JSON.stringify({ brand: "LLIF", pages: fivePages });
+    const wrapped = JSON.stringify({
+      artifact_type: "web_page",
+      content: { title: "Test", html: "```json\n" + inner + "\n```" },
+    });
+    const result = normalizeWebRendererOutput(wrapped);
+    assert.strictEqual(result.source.embedded_detected, true);
+    assert.strictEqual(result.pages.length, 5);
+  });
+
+  it("handles direct format — { brand, pages:[] }", () => {
+    const input = JSON.stringify({ brand: "bestlife", pages: fivePages });
+    const result = normalizeWebRendererOutput(input);
+    assert.strictEqual(result.source.kind, "direct");
+    assert.strictEqual(result.source.embedded_detected, false);
+    assert.strictEqual(result.pages.length, 5);
+    assert.strictEqual(result.brand, "bestlife");
+  });
+
+  it("handles direct format without brand", () => {
+    const input = JSON.stringify({ pages: [{ slug: "home", title: "Home", body_html: "<p/>" }] });
+    const result = normalizeWebRendererOutput(input);
+    assert.strictEqual(result.source.kind, "direct");
+    assert.strictEqual(result.pages.length, 1);
+    assert.strictEqual(result.pages[0].slug, "home");
+  });
+
+  it("generates slug from title when slug field is absent", () => {
+    const input = JSON.stringify({ pages: [{ title: "Contact Us", body_html: "<p/>" }] });
+    const result = normalizeWebRendererOutput(input);
+    assert.strictEqual(result.pages[0].slug, "contact-us");
+  });
+
+  it("detects duplicate slugs do NOT throw — caller handles duplicates", () => {
+    const input = JSON.stringify({
+      pages: [
+        { slug: "home", title: "Home", body_html: "<p/>" },
+        { slug: "home", title: "Home Copy", body_html: "<p/>" },
+      ],
+    });
+    // normalizeWebRendererOutput itself should not throw on duplicates
+    const result = normalizeWebRendererOutput(input);
+    assert.strictEqual(result.pages.length, 2);
+    assert.strictEqual(result.pages[0].slug, "home");
+    assert.strictEqual(result.pages[1].slug, "home");
+  });
+
+  it("throws on garbage content.html that is not parseable JSON", () => {
+    const wrapped = JSON.stringify({
+      artifact_type: "web_page",
+      content: { title: "Test", html: "json\nnot valid json {{{{" },
+    });
+    // tryExtractEmbeddedPages returns null → falls through to single-page HTML
+    const result = normalizeWebRendererOutput(wrapped);
+    // Should not throw; treats malformed html as raw HTML body
+    assert.strictEqual(result.source.kind, "wrapped");
+    assert.strictEqual(result.source.embedded_detected, false);
+    assert.strictEqual(result.pages.length, 1);
+    assert.ok(result.pages[0].body_html?.includes("not valid json"));
+  });
+
+  it("falls back gracefully for bare HTML string", () => {
+    const result = normalizeWebRendererOutput("<h1>Hello</h1><p>World</p>");
+    assert.strictEqual(result.source.kind, "raw_string");
+    assert.strictEqual(result.pages.length, 1);
+    assert.ok(result.pages[0].body_html?.includes("Hello"));
+  });
+
+  it("throws for empty input", () => {
+    assert.throws(() => normalizeWebRendererOutput(""), /Empty input/);
+    assert.throws(() => normalizeWebRendererOutput("   "), /Empty input/);
+  });
+});
+
+// ── parseRendererOutput (via normalizeWebRendererOutput) ──────────────────────
+
+describe("parseRendererOutput — wrapped format integration", () => {
+  it("extracts 5 pages when given a wrapped web_page artifact", () => {
+    const inner = JSON.stringify({
+      brand: "LLIF",
+      content_format: "html",
+      pages: [
+        { slug: "homepage", title: "Homepage", body_html: "<h1>Home</h1>" },
+        { slug: "about-llif", title: "About", body_html: "<h1>About</h1>" },
+        { slug: "how-it-works", title: "How It Works", body_html: "<h1>How</h1>" },
+        { slug: "privacy-governance", title: "Privacy", body_html: "<h1>Privacy</h1>" },
+        { slug: "research-platform", title: "Research", body_html: "<h1>Research</h1>" },
+      ],
+    });
+    const wrapped = JSON.stringify({
+      artifact_type: "web_page",
+      content: { title: "LLIF Website", html: `json\n${inner}` },
+    });
+    const pages = parseRendererOutput(wrapped);
+    assert.strictEqual(pages.length, 5);
+    assert.strictEqual(pages[0].source_key, "homepage");
+    assert.strictEqual(pages[4].source_key, "research-platform");
+  });
+});
+
 // ── slugify ───────────────────────────────────────────────────────────────────
 
 describe("slugify", () => {

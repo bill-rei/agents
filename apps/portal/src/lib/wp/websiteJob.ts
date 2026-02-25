@@ -7,6 +7,7 @@
  */
 
 import { normalizeEscapes } from "@/lib/content/normalizeEscapes";
+import { normalizeWebRendererOutput } from "@/lib/wp/normalizeRendererOutput";
 import {
   getPageIdBySlug,
   updatePage,
@@ -101,69 +102,30 @@ export function slugify(title: string): string {
 /**
  * Parse a raw web-renderer output string into a list of WebJobPage objects.
  *
- * Supported input formats:
- *  1. JSON with pages[] array (most common agent output)
- *  2. JSON with top-level html / body field  (single-page)
- *  3. Raw HTML / markdown                    (single-page fallback)
+ * Delegates to normalizeWebRendererOutput() which handles all known formats:
+ *  1. Wrapped web_page artifact with embedded JSON in content.html
+ *  2. Direct { brand, pages:[] } or { pages:[] } format
+ *  3. Single-page { html } / { body } format
+ *  4. Raw HTML / markdown string (single-page fallback)
+ *
+ * Returns [] for empty input; never throws (falls back to single-page on errors).
  */
 export function parseRendererOutput(raw: string): WebJobPage[] {
-  const trimmed = raw.trim();
+  if (!raw.trim()) return [];
 
-  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(trimmed);
-    } catch {
-      // fall through to raw HTML
-    }
-
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      const obj = parsed as Record<string, unknown>;
-
-      // pages[] array format
-      if (Array.isArray(obj.pages) && obj.pages.length > 0) {
-        return (obj.pages as Array<Record<string, unknown>>).map((p, i) => {
-          const rawSlug = typeof p.slug === "string" ? p.slug : "";
-          const rawTitle = typeof p.title === "string" ? p.title : `Page ${i + 1}`;
-          const sourceKey = rawSlug || slugify(rawTitle);
-          const bodyHtml =
-            typeof p.body_html === "string" ? normalizeEscapes(p.body_html) : null;
-          const bodyMarkdown =
-            typeof p.body_markdown === "string" ? normalizeEscapes(p.body_markdown) : null;
-          return makePage(sourceKey, rawTitle, sourceKey, bodyHtml, bodyMarkdown);
-        });
-      }
-
-      // { html } or { body } single-page format
-      const html =
-        typeof obj.html === "string"
-          ? normalizeEscapes(obj.html)
-          : typeof obj.body === "string"
-          ? normalizeEscapes(obj.body)
-          : null;
-
-      // { content: { html, title } } format from web-renderer
-      if (typeof obj.content === "object" && obj.content !== null) {
-        const c = obj.content as Record<string, unknown>;
-        const title =
-          typeof c.title === "string" ? c.title : "Page";
-        const pageHtml = typeof c.html === "string" ? normalizeEscapes(c.html) : html;
-        if (pageHtml) {
-          const key = slugify(title);
-          return [makePage(key, title, key, pageHtml, null)];
-        }
-      }
-
-      if (html) {
-        return [makePage("page", "Page", "page", html, null)];
-      }
-    }
+  let result;
+  try {
+    result = normalizeWebRendererOutput(raw);
+  } catch {
+    // Last-resort fallback: treat as raw body HTML
+    const body = normalizeEscapes(raw.trim());
+    if (!body) return [];
+    return [makePage("page", "Page", "page", body, null)];
   }
 
-  // Raw HTML / markdown fallback — single page
-  const body = normalizeEscapes(trimmed);
-  if (!body) return [];
-  return [makePage("page", "Page", "page", body, null)];
+  return result.pages.map((p) =>
+    makePage(p.slug, p.title, p.slug, p.body_html, p.body_markdown)
+  );
 }
 
 function makePage(

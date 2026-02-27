@@ -26,6 +26,35 @@ export interface AgentConfig {
   supportsFiles: boolean;
 }
 
+// ── Marketing Ops Ecosystem Config ────────────────────────────────────────────
+
+export type BrandMode = "LLIF" | "BestLife";
+export type PhaseMode = 1 | 2 | 3 | 4 | 5;
+
+export interface MarketingOpsConfig {
+  brandMode: BrandMode;              // "LLIF" | "BestLife"
+  phaseMode: PhaseMode;              // 1..5
+  enforceSitemapValidation: boolean;  // block invalid routes
+  enforceCampaignBoilerplate: boolean;// require Campaign Outline sections
+  enforcePrivacyLanguage: boolean;    // require stewardship + controls language
+  enforceMarkdownContract: boolean;   // single H1, no HTML, required sections
+  defaultRoute?: string;             // optional, used by web agents
+}
+
+/**
+ * Central, ecosystem-aware defaults.
+ * You can override per-request by passing opts from the UI (recommended).
+ */
+export const MARKETING_OPS_DEFAULTS: MarketingOpsConfig = {
+  brandMode: (process.env.MOPS_BRAND_MODE as BrandMode) ?? "LLIF",
+  phaseMode: (Number(process.env.MOPS_PHASE_MODE ?? 3) as PhaseMode) ?? 3,
+  enforceSitemapValidation: true,
+  enforceCampaignBoilerplate: true,
+  enforcePrivacyLanguage: true,
+  enforceMarkdownContract: true,
+  defaultRoute: process.env.MOPS_DEFAULT_ROUTE ?? "/news",
+};
+
 export const AGENTS: Record<string, AgentConfig> = {
   strategist: {
     key: "strategist",
@@ -227,11 +256,25 @@ export interface FileAttachment {
   mimeType: string;
 }
 
+function withMarketingOpsConfig(
+  inputs: Record<string, string>,
+  cfg?: Partial<MarketingOpsConfig>
+): Record<string, string> {
+  const merged: MarketingOpsConfig = { ...MARKETING_OPS_DEFAULTS, ...(cfg ?? {}) };
+
+  // Pass as a single JSON field so agents can parse it consistently.
+  // (Safer than lots of separate fields and avoids UI field clutter.)
+  return {
+    ...inputs,
+    marketingOpsConfig: JSON.stringify(merged),
+  };
+}
+
 export async function executeAgent(
   agentKey: string,
   inputs: Record<string, string>,
   files?: FileAttachment[],
-  opts?: { providerId?: string }
+  opts?: { providerId?: string; marketingOpsConfig?: Partial<MarketingOpsConfig> }
 ): Promise<ExecuteResult> {
   const agent = AGENTS[agentKey];
   if (!agent) throw new Error(`Unknown agent: ${agentKey}`);
@@ -242,13 +285,18 @@ export async function executeAgent(
   const url = `${agentBaseUrl(agent)}${agent.endpoint}${providerParam}`;
   const startTime = Date.now();
 
+  const finalInputs =
+  agent.pipeline === "campaign" || agent.pipeline === "web" || agent.pipeline === "both"
+    ? withMarketingOpsConfig(inputs, opts?.marketingOpsConfig)
+    : inputs;
+    
   try {
     let response: Response;
 
     if (files && files.length > 0 && agent.supportsFiles) {
       // Send as multipart FormData when files are present
       const formData = new FormData();
-      for (const [key, value] of Object.entries(inputs)) {
+      for (const [key, value] of Object.entries(finalInputs)) {
         if (value) formData.append(key, value);
       }
       for (const file of files) {
@@ -261,7 +309,7 @@ export async function executeAgent(
       response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(inputs),
+        body: JSON.stringify(finalInputs),
       });
     }
 

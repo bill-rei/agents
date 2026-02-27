@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { AGENTS, executeAgent } from "@/lib/agentGateway";
-import type { FileAttachment } from "@/lib/agentGateway";
+import type { FileAttachment, MarketingOpsConfig } from "@/lib/agentGateway";
 import { getFilePath } from "@/lib/storage";
 import { validateAgentOutputMarkdown } from "@/lib/agentOutput/validate";
 import { validateProviderId, getProvider } from "@/lib/llmProviders";
@@ -26,8 +26,30 @@ export async function POST(
     return NextResponse.json({ error: `Unknown agent: ${agentKey}` }, { status: 404 });
   }
 
+  // Sample request body:
+  // {
+  //   "runId": "run_123",
+  //   "inputs": { "campaignTitle": "..." },
+  //   "providerId": "openai",
+  //   "marketingOpsConfig": {
+  //     "brandMode": "BestLife",
+  //     "phaseMode": 3,
+  //     "enforceSitemapValidation": true,
+  //     "enforceCampaignBoilerplate": true,
+  //     "enforcePrivacyLanguage": true,
+  //     "enforceMarkdownContract": true,
+  //     "defaultRoute": "/news"
+  //   }
+  // }
   const body = await req.json();
-  const { runId, inputs, parentExecId, providerId, attemptNumber } = body;
+  const { runId, inputs, parentExecId, providerId, attemptNumber, marketingOpsConfig } = body as {
+    runId?: string;
+    inputs?: Record<string, string>;
+    parentExecId?: string;
+    providerId?: string;
+    attemptNumber?: string | number;
+    marketingOpsConfig?: Partial<MarketingOpsConfig>;
+  };
 
   if (!runId) {
     return NextResponse.json({ error: "runId is required" }, { status: 400 });
@@ -48,6 +70,23 @@ export async function POST(
           errorCode: "PROVIDER_NOT_CONFIGURED",
           error: `${prov?.displayName} is not configured. Set ${prov?.apiKeyEnvVar} in the environment.`,
         },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Validate marketingOpsConfig fields if provided
+  if (marketingOpsConfig) {
+    const { brandMode, phaseMode } = marketingOpsConfig;
+    if (brandMode !== undefined && brandMode !== "LLIF" && brandMode !== "BestLife") {
+      return NextResponse.json(
+        { error: `Invalid brandMode "${brandMode}". Must be "LLIF" or "BestLife".` },
+        { status: 400 }
+      );
+    }
+    if (phaseMode !== undefined && ![1, 2, 3, 4, 5].includes(phaseMode)) {
+      return NextResponse.json(
+        { error: `Invalid phaseMode ${phaseMode}. Must be 1–5.` },
         { status: 400 }
       );
     }
@@ -90,6 +129,7 @@ export async function POST(
     ...(inputs || {}),
     ...(providerId ? { _providerId: providerId } : {}),
     ...(attemptNumber && Number(attemptNumber) > 1 ? { _attemptNumber: String(attemptNumber) } : {}),
+    ...(marketingOpsConfig ? { _marketingOpsConfig: JSON.stringify(marketingOpsConfig) } : {}),
   };
 
   // Create execution record (pending)
@@ -117,6 +157,7 @@ export async function POST(
   // Call the agent — include project docs as file attachments
   const result = await executeAgent(agentKey, agentInputs, files, {
     providerId: providerId || undefined,
+    marketingOpsConfig: marketingOpsConfig || undefined,
   });
 
   // Update AgentExecution with result

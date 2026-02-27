@@ -12,7 +12,8 @@
     "test:integration": "npx tsx --test '__tests__/runSteps.test.ts'",
     "db:migrate": "prisma migrate dev",
     "db:seed": "npx tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test:marketing-config": "tsx scripts/test-marketing-config.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",

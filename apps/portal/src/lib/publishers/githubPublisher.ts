@@ -2,17 +2,30 @@
  * GitHub PR Publisher
  *
  * Creates a branch, commits file changes, and opens a pull request
- * against a Next.js site repo on GitHub using the REST API.
+ * against a GitHub repo using the REST API.
+ *
+ * Prefer calling publishTo() from "@/lib/github/publishTo" for new code —
+ * it resolves the target repo from the central PUBLISH_TARGETS config.
  *
  * Required env vars:
- *   GITHUB_TOKEN        — Personal access token with repo scope
- *   GITHUB_OWNER        — GitHub org or user (e.g. "acme-corp")
- *   GITHUB_REPO_LLIF    — Repo name for LLIF (e.g. "llif-site")
- *   GITHUB_REPO_BESTLIFE— Repo name for BestLife (e.g. "bestlife-site")
+ *   GITHUB_TOKEN               — PAT with Contents + Pull Requests + Metadata scopes
+ *   GITHUB_OWNER               — GitHub org or user (e.g. "livelearninnovate")
+ *
+ * Per-target repo env vars (see publishTargets.ts):
+ *   GITHUB_REPO_LLIF           — Repo name for the LLIF site
+ *   GITHUB_REPO_BESTLIFE       — Repo name for the BestLife site
+ *   GITHUB_REPO_SHARED_CONTENT — Repo name for shared content
  *
  * Optional env vars:
- *   GITHUB_BASE_BRANCH  — Default base branch (default: "main")
+ *   GITHUB_BASE_BRANCH      — Default base branch (default: "main")
+ *   GITHUB_PR_BRANCH_PREFIX — Branch prefix segment (default: "mops")
  */
+
+import {
+  PUBLISH_TARGETS,
+  resolveBranchPrefix,
+  type PublishTargetKey,
+} from "@/lib/publishTargets";
 
 export type PublishBrand = "LLIF" | "BestLife";
 
@@ -51,11 +64,11 @@ function dateSegment(): string {
   return new Date().toISOString().slice(0, 10); // "2025-01-15"
 }
 
-function buildBranchName(title: string, runId?: string): string {
+function buildBranchName(title: string, prefix: string, runId?: string): string {
   const segment = runId
     ? runId.replace(/[^a-z0-9_-]/gi, "").slice(0, 20)
     : dateSegment();
-  return `mops/${segment}/${slugifyBranchSegment(title)}`;
+  return `${prefix}/${segment}/${slugifyBranchSegment(title)}`;
 }
 
 function b64(content: string): string {
@@ -204,41 +217,36 @@ async function openPullRequest(
   return pr;
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+// ── Internal core ─────────────────────────────────────────────────────────────
 
-/**
- * Commit a set of file changes to a new branch and open a draft PR.
- *
- * @param args.brand       - "LLIF" or "BestLife" — determines target repo
- * @param args.title       - Human-readable title for the PR
- * @param args.description - Optional PR body / description
- * @param args.changes     - Files to create or update
- * @param args.baseBranch  - Override base branch (defaults to GITHUB_BASE_BRANCH || "main")
- * @param args.runId       - Optional portal run ID used in branch name
- */
-export async function createPublishPR(args: {
-  brand: PublishBrand;
+async function _createPR(args: {
+  targetKey: PublishTargetKey;
   title: string;
   description?: string;
   changes: PublishChange[];
   baseBranch?: string;
   runId?: string;
 }): Promise<GitHubPRResult> {
-  const { brand, title, description, changes, runId } = args;
+  const { targetKey, title, description, changes, runId } = args;
 
   if (!changes || changes.length === 0) {
     throw new Error("No changes provided — at least one file change is required");
   }
 
+  const targetConfig = PUBLISH_TARGETS[targetKey];
+  if (!targetConfig) {
+    throw new Error(`Unknown publish target: "${targetKey}"`);
+  }
+
   // ── Resolve credentials + repo ───────────────────────────────────────────
   const token = getEnv("GITHUB_TOKEN");
   const owner = getEnv("GITHUB_OWNER");
-  const repoEnvKey = brand === "LLIF" ? "GITHUB_REPO_LLIF" : "GITHUB_REPO_BESTLIFE";
-  const repo = getEnv(repoEnvKey);
+  const repo = getEnv(targetConfig.repoEnvKey);
   const baseBranch = args.baseBranch || process.env.GITHUB_BASE_BRANCH || "main";
+  const branchPrefix = resolveBranchPrefix(targetConfig);
 
   // ── Build branch name ────────────────────────────────────────────────────
-  const branchName = buildBranchName(title, runId);
+  const branchName = buildBranchName(title, branchPrefix, runId);
 
   // ── Get base branch HEAD SHA ─────────────────────────────────────────────
   const baseSha = await getBaseSha(token, owner, repo, baseBranch);
@@ -248,7 +256,7 @@ export async function createPublishPR(args: {
 
   // ── Commit each change ───────────────────────────────────────────────────
   for (const change of changes) {
-    const commitMsg = `mops: update ${change.path} via portal (${runId ?? "no-run-id"})`;
+    const commitMsg = `${branchPrefix}: update ${change.path} via portal (${runId ?? "no-run-id"})`;
     await upsertFile(token, owner, repo, branchName, change, commitMsg);
   }
 
@@ -275,4 +283,48 @@ export async function createPublishPR(args: {
     repo,
     owner,
   };
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+/**
+ * Commit a set of file changes to a new branch and open a draft PR.
+ * Uses the central PUBLISH_TARGETS config to resolve the target repo.
+ *
+ * Prefer this over createPublishPR for new code.
+ *
+ * @param args.targetKey   - Key from PUBLISH_TARGETS ("LLIF" | "BestLife" | "SharedContent")
+ * @param args.title       - Human-readable title for the PR
+ * @param args.description - Optional PR body / description
+ * @param args.changes     - Files to create or update
+ * @param args.baseBranch  - Override base branch (defaults to GITHUB_BASE_BRANCH || "main")
+ * @param args.runId       - Optional portal run ID used in branch name
+ */
+export async function createPublishPRForTarget(args: {
+  targetKey: PublishTargetKey;
+  title: string;
+  description?: string;
+  changes: PublishChange[];
+  baseBranch?: string;
+  runId?: string;
+}): Promise<GitHubPRResult> {
+  return _createPR(args);
+}
+
+/**
+ * Backward-compatible wrapper — resolves brand to a PublishTargetKey.
+ * New code should use createPublishPRForTarget or publishTo() instead.
+ *
+ * @param args.brand       - "LLIF" or "BestLife"
+ */
+export async function createPublishPR(args: {
+  brand: PublishBrand;
+  title: string;
+  description?: string;
+  changes: PublishChange[];
+  baseBranch?: string;
+  runId?: string;
+}): Promise<GitHubPRResult> {
+  const { brand, ...rest } = args;
+  return _createPR({ targetKey: brand as PublishTargetKey, ...rest });
 }

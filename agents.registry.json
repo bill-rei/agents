@@ -11,5 +11,7 @@
     "entry": "./marketing-staging-sync/push-page.mjs",
     "type": "cli"
   },
-  "marketing-video-producer": "./marketing-video-producer/server.js"
+  "marketing-video-producer": "./marketing-video-producer/server.js",
+  "brand-asset-compiler": "./brand-asset-compiler/server.js",
+  "creative-pack-generator": "./creative-pack-generator/server.js"
 }

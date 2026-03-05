@@ -69,6 +69,8 @@ model User {
   agentJobs         AgentJob[]
   canvaAssets       CanvaAsset[]
   videoAssets       VideoAsset[]
+  ucsMessages         UcsMessage[]
+  channelConnections  ChannelConnection[]
 
   @@map("users")
 }
@@ -383,6 +385,101 @@ model CanvaAsset {
 
   @@index([artifactId])
   @@map("canva_assets")
+}
+
+// ─── Channel connections + publish jobs ───────────────────────────────────────
+
+model ChannelConnection {
+  id                      String       @id @default(cuid())
+  brandMode               UcsBrandMode @map("brand_mode")
+  platform                String       // "x" | "linkedin"
+  externalAccountId       String       @map("external_account_id")
+  displayName             String       @map("display_name")
+  accessTokenCiphertext   String       @map("access_token_ciphertext") @db.Text
+  refreshTokenCiphertext  String?      @map("refresh_token_ciphertext") @db.Text
+  expiresAt               DateTime?    @map("expires_at")
+  scopesJson              Json         @default("[]") @map("scopes_json")
+  connectedByUserId       String       @map("connected_by_user_id")
+  connectedAt             DateTime     @default(now()) @map("connected_at")
+  updatedAt               DateTime     @updatedAt @map("updated_at")
+
+  connectedBy  User            @relation(fields: [connectedByUserId], references: [id])
+  publishJobs  UcsPublishJob[]
+
+  @@unique([brandMode, platform])
+  @@index([brandMode])
+  @@map("channel_connections")
+}
+
+model UcsPublishJob {
+  id            String            @id @default(cuid())
+  brandMode     UcsBrandMode      @map("brand_mode")
+  ucsMessageId  String            @map("ucs_message_id")
+  platform      String            // "x" | "linkedin"
+  connectionId  String            @map("connection_id")
+  scheduledFor  DateTime?         @map("scheduled_for")
+  // queued | running | scheduled | published | failed | dead_letter | not_supported
+  status        String            @default("queued")
+  attemptCount  Int               @default(0) @map("attempt_count")
+  nextRetryAt   DateTime?         @map("next_retry_at")
+  lastError     String?           @map("last_error") @db.Text
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  ucsMessage    UcsMessage        @relation(fields: [ucsMessageId], references: [id])
+  connection    ChannelConnection @relation(fields: [connectionId], references: [id])
+  events        UcsJobEvent[]
+
+  @@index([ucsMessageId])
+  @@index([status])
+  @@map("ucs_publish_jobs")
+}
+
+model UcsJobEvent {
+  id           String        @id @default(cuid())
+  publishJobId String        @map("publish_job_id")
+  ts           DateTime      @default(now())
+  level        String        // "info" | "warn" | "error"
+  message      String
+  metaJson     Json          @default("{}") @map("meta_json")
+
+  publishJob   UcsPublishJob @relation(fields: [publishJobId], references: [id], onDelete: Cascade)
+
+  @@index([publishJobId])
+  @@map("ucs_job_events")
+}
+
+// ─── Universal Content Schema (UCS) ──────────────────────────────────────────
+
+enum UcsBrandMode {
+  LLIF
+  BestLife
+}
+
+enum UcsStatus {
+  draft
+  in_review
+  approved
+}
+
+model UcsMessage {
+  id            String       @id @default(cuid())
+  brandMode     UcsBrandMode @map("brand_mode")
+  title         String
+  canonicalJson Json         @map("canonical_json")
+  overridesJson Json         @default("{}") @map("overrides_json")
+  rendersJson   Json         @default("{}") @map("renders_json")
+  status        UcsStatus    @default(draft)
+  createdById   String       @map("created_by_id")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  publishJobs   UcsPublishJob[]
+
+  @@index([brandMode])
+  @@index([status])
+  @@map("ucs_messages")
 }
 
 // ─── Social preview approval state (run-level, per-channel) ──────────────────

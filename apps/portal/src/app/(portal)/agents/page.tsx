@@ -38,6 +38,14 @@ export default function AgentsPage() {
     .filter((a) => a.pipeline === "web" || a.pipeline === "both")
     .sort((a, b) => a.pipelineOrder - b.pipelineOrder);
 
+  const brandAgents = agents
+    .filter((a) => a.pipeline === "brand")
+    .sort((a, b) => a.pipelineOrder - b.pipelineOrder);
+
+  const creativeAgents = agents
+    .filter((a) => a.pipeline === "creative")
+    .sort((a, b) => a.pipelineOrder - b.pipelineOrder);
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-6">Agents</h2>
@@ -51,7 +59,7 @@ export default function AgentsPage() {
         </div>
       </div>
 
-      <div>
+      <div className="mb-8">
         <h3 className="text-sm font-bold text-gray-500 mb-3">Web Page Pipeline</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {webAgents.map((agent) => (
@@ -59,14 +67,44 @@ export default function AgentsPage() {
           ))}
         </div>
       </div>
+
+      {creativeAgents.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-bold text-gray-500 mb-3">Creative Tools</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {creativeAgents.map((agent) => (
+              <AgentCard
+                key={agent.key}
+                agent={agent}
+                href={agent.key === "creative-pack-generator" ? "/creative-tools" : undefined}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {brandAgents.length > 0 && (
+        <div>
+          <h3 className="text-sm font-bold text-gray-500 mb-3">Brand Tools</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {brandAgents.map((agent) => (
+              <AgentCard
+                key={agent.key}
+                agent={agent}
+                href={agent.key === "brand-asset-compiler" ? "/brand-tools" : undefined}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function AgentCard({ agent }: { agent: AgentInfo }) {
+function AgentCard({ agent, href }: { agent: AgentInfo; href?: string }) {
   return (
     <Link
-      href={`/agents/${agent.key}`}
+      href={href ?? `/agents/${agent.key}`}
       className="bg-white border rounded p-4 hover:border-blue-300 hover:shadow-sm transition-all"
     >
       <div className="flex items-center gap-2 mb-1">

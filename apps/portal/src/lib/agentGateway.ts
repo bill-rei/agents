@@ -20,7 +20,7 @@ export interface AgentConfig {
   baseUrl?: string;
   port: number;
   endpoint: string;
-  pipeline: "campaign" | "web" | "both" | "video";
+  pipeline: "campaign" | "web" | "both" | "video" | "brand" | "creative";
   pipelineOrder: number;
   inputFields: FieldDef[];
   supportsFiles: boolean;
@@ -198,6 +198,51 @@ export const AGENTS: Record<string, AgentConfig> = {
       { name: "renderProfile", label: "Render Profile", type: "text", required: false },
     ],
   },
+  "creative-pack-generator": {
+    key: "creative-pack-generator",
+    label: "Creative Pack Generator",
+    description: "Generates platform-sized images, LinkedIn/X copy variants, and a Canva upload bundle from an approved campaign",
+    port: 3010,
+    endpoint: "/api/compile",
+    pipeline: "creative",
+    pipelineOrder: 1,
+    supportsFiles: false,
+    inputFields: [
+      { name: "brandKey",       label: "Brand",           type: "select",   required: true,  options: ["LLIF", "BestLife"] },
+      { name: "campaignSlug",   label: "Campaign Slug",   type: "text",     required: false },
+      { name: "campaignTitle",  label: "Campaign Title",  type: "text",     required: false },
+      { name: "keyMessage",     label: "Key Message",     type: "textarea", required: false },
+      { name: "cta",            label: "CTA",             type: "text",     required: false },
+      { name: "campaignMonth",  label: "Month (YYYY-MM)", type: "text",     required: false },
+      { name: "force",          label: "Force Overwrite", type: "select",   required: false, options: ["false", "true"] },
+    ],
+  },
+  "brand-asset-compiler": {
+    key: "brand-asset-compiler",
+    label: "Brand Asset Compiler",
+    description: "Generates favicon sets, social packs, OG images, Next.js assets, and Canva bundles from a master SVG logo",
+    port: 3009,
+    endpoint: "/api/compile",
+    pipeline: "brand",
+    pipelineOrder: 1,
+    supportsFiles: false,
+    inputFields: [
+      {
+        name: "brandKey",
+        label: "Brand",
+        type: "select",
+        required: true,
+        options: ["LLIF", "BestLife"],
+      },
+      {
+        name: "force",
+        label: "Force Overwrite",
+        type: "select",
+        required: false,
+        options: ["false", "true"],
+      },
+    ],
+  },
   "marketing-video-producer": {
     key: "marketing-video-producer",
     label: "Video Producer",
@@ -226,9 +271,14 @@ export const AGENT_LIST = Object.values(AGENTS);
  */
 export function getAgentsByPipeline(pipeline: AgentConfig["pipeline"]): AgentConfig[] {
   return AGENT_LIST
-    .filter((a) => a.pipeline === pipeline || (pipeline !== "video" && a.pipeline === "both"))
+    .filter((a) =>
+      a.pipeline === pipeline ||
+      (pipeline !== "video" && pipeline !== "brand" && pipeline !== "creative" && a.pipeline === "both")
+    )
     .sort((a, b) => a.pipelineOrder - b.pipelineOrder);
 }
+
+export const BRAND_PIPELINE = getAgentsByPipeline("brand");
 
 // Backward-compatible named exports — derived from the helper.
 export const CAMPAIGN_PIPELINE = getAgentsByPipeline("campaign");

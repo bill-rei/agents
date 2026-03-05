@@ -2,17 +2,16 @@
  * POST /api/publish/github
  *
  * Creates a GitHub branch + commit(s) + draft PR for the given set of file changes.
- * This is the "GitHub PR" publish target, a first-class alternative to the
- * WordPress Staging legacy path.
  *
  * Body:
  * {
- *   "runId":       string,                           // required
- *   "brand":       "LLIF" | "BestLife",              // required
- *   "title":       string,                           // required — PR title
- *   "description": string?,                          // optional — PR body
- *   "changes":     [{ "path": string, "content": string }],  // required, ≥1
- *   "baseBranch":  string?                           // optional, default GITHUB_BASE_BRANCH || "main"
+ *   "runId":       string,                                        // required
+ *   "target":      "LLIF" | "BestLife" | "SharedContent",        // preferred
+ *   "brand":       "LLIF" | "BestLife",                          // legacy alias for target
+ *   "title":       string,                                        // required — PR title
+ *   "description": string?,                                       // optional — PR body
+ *   "changes":     [{ "path": string, "content": string }],      // required, ≥1
+ *   "baseBranch":  string?                                        // optional, default GITHUB_BASE_BRANCH || "main"
  * }
  *
  * Example curl (localhost):
@@ -22,7 +21,7 @@
  *     -H "Cookie: next-auth.session-token=<your-token>" \
  *     -d '{
  *       "runId": "cm_abc123",
- *       "brand": "LLIF",
+ *       "target": "LLIF",
  *       "title": "Homepage Q1 Update",
  *       "changes": [
  *         { "path": "content/pages/homepage.mdx", "content": "# Home\n\nWelcome." }
@@ -32,8 +31,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { createPublishPR } from "@/lib/publishers/githubPublisher";
-import type { PublishBrand, PublishChange } from "@/lib/publishers/githubPublisher";
+import { PUBLISH_TARGETS } from "@/lib/publishTargets";
+import type { PublishTargetKey } from "@/lib/publishTargets";
+import { publishTo } from "@/lib/github/publishTo";
+import type { PublishChange } from "@/lib/github/publishTo";
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,9 +50,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { runId, brand, title, description, changes, baseBranch } = body as {
+  const { runId, target, brand, title, description, changes, baseBranch } = body as {
     runId?: string;
-    brand?: string;
+    target?: string;
+    brand?: string;  // legacy alias for target
     title?: string;
     description?: string;
     changes?: unknown;
@@ -64,9 +66,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "runId is required" }, { status: 400 });
   }
 
-  if (brand !== "LLIF" && brand !== "BestLife") {
+  // Accept either `target` (new) or `brand` (legacy)
+  const targetKey = (target ?? brand) as PublishTargetKey | undefined;
+  if (!targetKey || !(targetKey in PUBLISH_TARGETS)) {
     return NextResponse.json(
-      { error: 'brand must be "LLIF" or "BestLife"' },
+      { error: `target must be one of: ${Object.keys(PUBLISH_TARGETS).join(", ")}` },
       { status: 400 }
     );
   }
@@ -104,8 +108,7 @@ export async function POST(req: NextRequest) {
 
   let result;
   try {
-    result = await createPublishPR({
-      brand: brand as PublishBrand,
+    result = await publishTo(targetKey, {
       title: title.trim(),
       description,
       changes: typedChanges,

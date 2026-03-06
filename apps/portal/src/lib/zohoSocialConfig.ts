@@ -26,7 +26,11 @@ export const ENABLED_CHANNEL_KEYS = ZOHO_CHANNELS
   .filter((c) => c.status === "enabled")
   .map((c) => c.key);
 
-export function isLlifBrand(brand: string | null | undefined): boolean {
+/**
+ * @deprecated Use BRAND_REGISTRY from @/config/brand for brand comparisons.
+ * Left here for backward compatibility with existing Zoho export code.
+ */
+export function isBrandKey(brand: string | null | undefined, key: string): boolean {
   if (!brand) return false;
-  return brand.toLowerCase() === "llif";
+  return brand.toLowerCase() === key.toLowerCase();
 }

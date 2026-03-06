@@ -1,10 +1,19 @@
 import { z } from "zod";
+import { BRAND_KEYS } from "@/config/brand";
 
-export const UCS_BRAND_MODES = ["LLIF", "BestLife"] as const;
+/**
+ * UCS_BRAND_MODES is derived from the brand registry so adding a brand in
+ * registry.ts automatically makes it valid here — no manual sync needed.
+ *
+ * Kept as a runtime array (not a const tuple) so the type stays `string`
+ * rather than a union literal — this avoids breaking existing consumers
+ * that pass arbitrary brandKey strings.
+ */
+export const UCS_BRAND_MODES: string[] = BRAND_KEYS;
 export const UCS_STATUSES = ["draft", "in_review", "approved"] as const;
 export const UCS_CHANNELS = ["linkedin", "x", "instagram", "tiktok", "reddit", "website"] as const;
 
-export type UCSBrandMode = (typeof UCS_BRAND_MODES)[number];
+export type UCSBrandMode = string; // any registered brandKey
 export type UCSStatus = (typeof UCS_STATUSES)[number];
 export type UCSChannel = (typeof UCS_CHANNELS)[number];
 
@@ -66,7 +75,7 @@ export const UCSOverridesSchema = z.object({
 // ── Top-level payloads ────────────────────────────────────────────────────────
 
 export const CreateUCSSchema = z.object({
-  brandMode: z.enum(UCS_BRAND_MODES),
+  brandMode: z.string().min(1),
   title: z.string().min(1, "Title is required"),
   canonical: UCSCanonicalSchema,
 });

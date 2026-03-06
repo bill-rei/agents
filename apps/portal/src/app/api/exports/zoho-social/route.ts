@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { ENABLED_CHANNEL_KEYS, ZOHO_CHANNELS, isLlifBrand } from "@/lib/zohoSocialConfig";
+import { ENABLED_CHANNEL_KEYS, ZOHO_CHANNELS } from "@/lib/zohoSocialConfig";
 import { formatZohoDate, formatZohoTime, buildCsvContent, buildZipBuffer, type ZohoRow } from "@/lib/zohoExport";
 import { getContentItemById } from "@/lib/contentItemStore";
 
@@ -43,14 +43,6 @@ export async function POST(req: NextRequest) {
   const contentItem = getContentItemById(contentItemId);
   if (!contentItem) {
     return NextResponse.json({ error: "Content item not found" }, { status: 404 });
-  }
-
-  // Brand boundary
-  if (!isLlifBrand(contentItem.brand)) {
-    return NextResponse.json(
-      { error: `Brand "${contentItem.brand}" is not eligible for Zoho Social export. Only LLIF is supported.` },
-      { status: 403 }
-    );
   }
 
   // Validate image URLs are absolute

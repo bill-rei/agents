@@ -61,10 +61,15 @@ export function loadRegistry(siteKey: string): TargetRegistry {
 
 // ── Helpers ──
 
-/** Derive brand from a target registry (explicit field or prefix convention). */
+/** Derive brand from a target registry.
+ * Reads the explicit `brand` field from the JSON file.
+ * Falls back to the DEFAULT_BRAND_KEY env var, then "unknown" so callers
+ * can detect misconfigured registries without crashing.
+ */
 export function deriveBrandFromTarget(reg: TargetRegistry): string {
   if (reg.brand) return reg.brand.toLowerCase();
-  return reg.site_key.startsWith("llif") ? "llif" : "bestlife";
+  // No hard-coded LLIF/BestLife fallback — require explicit `brand` in target JSON.
+  return (process.env.DEFAULT_BRAND_KEY ?? "unknown").toLowerCase();
 }
 
 /** Get the effective type of a target ("web" if not specified, for backward compat). */

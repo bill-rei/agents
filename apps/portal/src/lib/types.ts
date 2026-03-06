@@ -1,5 +1,5 @@
 // ── Brands ────────────────────────────────────────────────────────────────────
-export type Brand = "LLIF" | "BestLife";
+export type Brand = string;
 
 // ── Publish ───────────────────────────────────────────────────────────────────
 export type PublishMode = "draft" | "now" | "schedule";

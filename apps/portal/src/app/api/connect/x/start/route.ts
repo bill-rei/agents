@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
 
   const brand = req.nextUrl.searchParams.get("brand") as UCSBrandMode | null;
   if (!brand || !UCS_BRAND_MODES.includes(brand)) {
-    return NextResponse.json({ error: "brand param required (LLIF | BestLife)" }, { status: 400 });
+    return NextResponse.json(
+      { error: `brand param required. Valid values: ${UCS_BRAND_MODES.join(", ")}` },
+      { status: 400 }
+    );
   }
 
   const nonce = generateNonce();

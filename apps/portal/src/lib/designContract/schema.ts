@@ -1,9 +1,14 @@
 import { z } from "zod";
+import { BRAND_KEYS } from "@/config/brand";
 
 // ── Enums ──
 
-export const BrandEnum = z.enum(["llif", "bestlife"]);
-export type Brand = z.infer<typeof BrandEnum>;
+// Brand keys are sourced from the brand registry — no hard-coded brand names.
+export const BrandEnum = z.string().refine(
+  (v) => BRAND_KEYS.includes(v),
+  (v) => ({ message: `Unknown brand key "${v}". Registered: ${BRAND_KEYS.join(", ")}` })
+);
+export type Brand = string;
 
 export const CampaignTypeEnum = z.enum([
   "use_case",

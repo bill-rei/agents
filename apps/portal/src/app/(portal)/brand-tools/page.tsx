@@ -30,12 +30,12 @@ interface RunResult {
   result: string;
 }
 
-const BRANDS = ["LLIF", "BestLife"] as const;
+import { BRAND_KEYS } from "@/config/brand";
 
 // ── Page component ────────────────────────────────────────────────────────────
 
 export default function BrandToolsPage() {
-  const [brandKey, setBrandKey]   = useState<string>("LLIF");
+  const [brandKey, setBrandKey]   = useState<string>(BRAND_KEYS[0] ?? "mycoachbill");
   const [force, setForce]         = useState(false);
   const [running, setRunning]     = useState(false);
   const [lastResult, setLastResult] = useState<RunResult | null>(null);
@@ -102,7 +102,7 @@ export default function BrandToolsPage() {
               disabled={running}
               className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"
             >
-              {BRANDS.map((b) => (
+              {BRAND_KEYS.map((b) => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </select>

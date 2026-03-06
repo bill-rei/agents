@@ -26,9 +26,9 @@ const USER_URL = "https://api.twitter.com/2/users/me";
 const TWEETS_URL = "https://api.twitter.com/2/tweets";
 const SCOPES = "tweet.write tweet.read users.read offline.access";
 
-// Env var resolution order (brand = "LLIF" | "BestLife"):
-//   1. LLIF_X_CLIENT_ID / BESTLIFE_X_CLIENT_ID   (brand-specific)
-//   2. X_CLIENT_ID                                (shared fallback)
+// Env var resolution order (brand = any registered brandKey, e.g. "mycoachbill"):
+//   1. <BRANDKEY_UPPER>_X_CLIENT_ID  (brand-specific, e.g. MYCOACHBILL_X_CLIENT_ID)
+//   2. X_CLIENT_ID                   (shared fallback)
 function clientId(brand?: string): string {
   const branded = brand ? process.env[`${brand.toUpperCase()}_X_CLIENT_ID`] : undefined;
   const v = branded ?? process.env.X_CLIENT_ID;

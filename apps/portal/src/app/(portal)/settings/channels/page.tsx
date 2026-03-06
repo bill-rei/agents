@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { useBrand } from "@/lib/useBrand";
 import type { UCSBrandMode } from "@/lib/ucs/schema";
+import { BRAND_KEYS } from "@/config/brand";
 
 interface SafeConnection {
   id: string;
@@ -24,7 +26,6 @@ const PLATFORM_LABELS: Record<Platform, string> = {
 };
 const PLATFORM_ICONS: Record<Platform, string> = { x: "𝕏", linkedin: "in", instagram: "IG", tiktok: "TT" };
 
-/** Notes shown under unconnected cards to set expectations. */
 const PLATFORM_NOTES: Record<Platform, string | null> = {
   x: null,
   linkedin: null,
@@ -32,18 +33,32 @@ const PLATFORM_NOTES: Record<Platform, string | null> = {
   tiktok: "Video publishing requires TikTok app audit approval. Connect now to prepare.",
 };
 
-const BRAND_COLORS: Record<UCSBrandMode, string> = {
-  LLIF: "text-indigo-700 bg-indigo-50 border-indigo-200",
-  BestLife: "text-emerald-700 bg-emerald-50 border-emerald-200",
-};
+// Colours cycle across registered brands (no hard-coded brand mapping).
+const BRAND_COLOR_CYCLE = [
+  "text-indigo-700 bg-indigo-50 border-indigo-200",
+  "text-emerald-700 bg-emerald-50 border-emerald-200",
+  "text-violet-700 bg-violet-50 border-violet-200",
+  "text-rose-700 bg-rose-50 border-rose-200",
+];
+
+function brandColor(index: number): string {
+  return BRAND_COLOR_CYCLE[index % BRAND_COLOR_CYCLE.length];
+}
 
 export default function ChannelsSettingsPage() {
   const searchParams = useSearchParams();
-  const [brand, setBrand] = useState<UCSBrandMode>("LLIF");
+  const { brand: activeBrand } = useBrand();
+
+  const [brand, setBrand] = useState<UCSBrandMode>(BRAND_KEYS[0] ?? "mycoachbill");
   const [connections, setConnections] = useState<SafeConnection[]>([]);
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; msg: string }>>({});
   const [loading, setLoading] = useState(false);
   const [banner, setBanner] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  // Default to active brand from cookie/env on mount
+  useEffect(() => {
+    if (activeBrand) setBrand(activeBrand.brandKey);
+  }, [activeBrand]);
 
   const fetchConnections = useCallback(async () => {
     setLoading(true);
@@ -60,9 +75,9 @@ export default function ChannelsSettingsPage() {
   useEffect(() => {
     const connected = searchParams.get("connected");
     const error = searchParams.get("error");
-    const brandParam = searchParams.get("brand") as UCSBrandMode | null;
+    const brandParam = searchParams.get("brand");
     if (connected) {
-      if (brandParam) setBrand(brandParam);
+      if (brandParam && BRAND_KEYS.includes(brandParam)) setBrand(brandParam);
       setBanner({ type: "success", msg: `${PLATFORM_LABELS[connected as Platform] ?? connected} connected successfully!` });
     } else if (error) {
       setBanner({ type: "error", msg: `OAuth error: ${error.replace(/_/g, " ")}` });
@@ -91,7 +106,7 @@ export default function ChannelsSettingsPage() {
       ...p,
       [conn.id]: {
         ok: data.ok,
-        msg: data.ok ? `✓ Connected as ${data.displayName ?? conn.displayName}` : `✗ ${data.error}`,
+        msg: data.ok ? `Connected as ${data.displayName ?? conn.displayName}` : `${data.error}`,
       },
     }));
   }
@@ -103,7 +118,8 @@ export default function ChannelsSettingsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Connected Channels</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Connect social accounts per brand. Connections are brand-isolated — an LLIF account cannot publish BestLife content.
+          Connect social accounts per brand. Connections are brand-isolated — one brand&apos;s
+          accounts cannot publish another brand&apos;s content.
         </p>
       </div>
 
@@ -120,14 +136,14 @@ export default function ChannelsSettingsPage() {
         </div>
       )}
 
-      {/* Brand selector */}
-      <div className="flex gap-3 mb-6">
-        {(["LLIF", "BestLife"] as UCSBrandMode[]).map((b) => (
+      {/* Brand selector — built from registry, no hard-coded names */}
+      <div className="flex gap-3 mb-6 flex-wrap">
+        {BRAND_KEYS.map((b, i) => (
           <button
             key={b}
             onClick={() => setBrand(b)}
             className={`px-5 py-2 rounded-xl text-sm font-semibold border-2 transition-all ${
-              brand === b ? BRAND_COLORS[b] : "border-gray-200 text-gray-500 hover:border-gray-300"
+              brand === b ? brandColor(i) : "border-gray-200 text-gray-500 hover:border-gray-300"
             }`}
           >
             {b}
@@ -137,6 +153,7 @@ export default function ChannelsSettingsPage() {
 
       {/* Platform cards */}
       <div className="space-y-4">
+        {loading && <p className="text-sm text-gray-400">Loading connections…</p>}
         {platforms.map((platform) => {
           const conn = connections.find((c) => c.platform === platform);
           const test = testResults[conn?.id ?? ""];
@@ -224,7 +241,10 @@ export default function ChannelsSettingsPage() {
           <li>TIKTOK_CLIENT_KEY · TIKTOK_CLIENT_SECRET · TIKTOK_REDIRECT_URI</li>
           <li>TOKEN_ENCRYPTION_KEY (32-byte hex: openssl rand -hex 32)</li>
         </ul>
-        <p className="text-gray-400 pt-1">Brand-specific prefix: LLIF_INSTAGRAM_CLIENT_ID, BESTLIFE_X_CLIENT_ID, etc.</p>
+        <p className="text-gray-400 pt-1">
+          Brand-specific prefix: <code>{"<BRANDKEY>"}_X_CLIENT_ID</code>, etc.
+          Active brand: <code>{brand}</code>
+        </p>
       </div>
     </div>
   );

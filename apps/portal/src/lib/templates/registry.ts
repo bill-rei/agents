@@ -1,40 +1,68 @@
-import type { Brand, CampaignType } from "@/lib/designContract/schema";
+import type { CampaignType } from "@/lib/designContract/schema";
+import { BRAND_KEYS } from "@/config/brand";
 
 /**
- * Maps (brand, campaign_type) → Elementor template ID.
+ * Maps (brandKey, campaign_type) → Elementor template ID.
  *
- * Placeholder IDs — replace with real Elementor template IDs once created in WP.
- * LLIF templates: 1111–1115, BestLife templates: 2221–2225.
+ * Template IDs are deployment-specific placeholders. Replace with real
+ * Elementor template IDs once created in WordPress.
+ *
+ * To add templates for a new brand: extend BRAND_TEMPLATE_SEEDS below
+ * using the brandKey from the registry, then restart the server.
+ * No code changes elsewhere are needed.
  */
-const TEMPLATE_REGISTRY: Record<Brand, Record<CampaignType, number>> = {
-  llif: {
-    use_case: 1111,
-    thematic: 1112,
-    release: 1113,
-    feature: 1114,
-    program: 1115,
-  },
-  bestlife: {
-    use_case: 2221,
-    feature: 2222,
-    thematic: 2223,
-    release: 2224,
-    program: 2225,
+
+type TemplateMap = Record<CampaignType, number>;
+
+// Seed IDs per brand (offset by 1000 per brand slot to avoid collisions).
+const BRAND_TEMPLATE_SEEDS: Record<string, TemplateMap> = {
+  mycoachbill: {
+    use_case: 1001,
+    thematic: 1002,
+    release: 1003,
+    feature: 1004,
+    program: 1005,
   },
 };
 
-/** Allowed campaign types per brand (all brands support all types for now). */
-const ALLOWED_CAMPAIGN_TYPES: Record<Brand, CampaignType[]> = {
-  llif: ["use_case", "feature", "thematic", "release", "program"],
-  bestlife: ["use_case", "feature", "thematic", "release", "program"],
-};
+// Build the full registry, auto-generating placeholder IDs for any registered
+// brand that doesn't have explicit seeds yet.
+function buildRegistry(): Record<string, TemplateMap> {
+  const registry: Record<string, TemplateMap> = {};
+  const campaignTypes: CampaignType[] = ["use_case", "thematic", "release", "feature", "program"];
 
-export function getTemplateId(brand: Brand, campaignType: CampaignType): number {
-  const allowed = ALLOWED_CAMPAIGN_TYPES[brand];
-  if (!allowed || !allowed.includes(campaignType)) {
+  BRAND_KEYS.forEach((brandKey, brandIndex) => {
+    const seeds = BRAND_TEMPLATE_SEEDS[brandKey];
+    if (seeds) {
+      registry[brandKey] = seeds;
+    } else {
+      // Auto-generate numeric placeholders for unknown brands
+      const base = (brandIndex + 10) * 1000;
+      const autoMap = {} as TemplateMap;
+      campaignTypes.forEach((ct, i) => {
+        autoMap[ct] = base + i + 1;
+      });
+      registry[brandKey] = autoMap;
+    }
+  });
+
+  return registry;
+}
+
+const TEMPLATE_REGISTRY = buildRegistry();
+
+const ALLOWED_CAMPAIGN_TYPES: CampaignType[] = [
+  "use_case",
+  "feature",
+  "thematic",
+  "release",
+  "program",
+];
+
+export function getTemplateId(brand: string, campaignType: CampaignType): number {
+  if (!ALLOWED_CAMPAIGN_TYPES.includes(campaignType)) {
     throw new Error(
-      `Campaign type "${campaignType}" is not allowed for brand "${brand}". ` +
-      `Allowed: ${allowed?.join(", ") || "none"}`
+      `Campaign type "${campaignType}" is not allowed. Allowed: ${ALLOWED_CAMPAIGN_TYPES.join(", ")}`
     );
   }
 
@@ -47,17 +75,16 @@ export function getTemplateId(brand: Brand, campaignType: CampaignType): number 
   return id;
 }
 
-export function listTemplates(): Array<{ brand: Brand; campaignType: CampaignType; templateId: number }> {
-  const result: Array<{ brand: Brand; campaignType: CampaignType; templateId: number }> = [];
+export function listTemplates(): Array<{ brand: string; campaignType: CampaignType; templateId: number }> {
+  const result: Array<{ brand: string; campaignType: CampaignType; templateId: number }> = [];
   for (const [brand, types] of Object.entries(TEMPLATE_REGISTRY)) {
     for (const [ct, tid] of Object.entries(types)) {
-      result.push({ brand: brand as Brand, campaignType: ct as CampaignType, templateId: tid });
+      result.push({ brand, campaignType: ct as CampaignType, templateId: tid });
     }
   }
   return result;
 }
 
-export function isAllowedCampaignType(brand: Brand, campaignType: string): boolean {
-  const allowed = ALLOWED_CAMPAIGN_TYPES[brand];
-  return allowed ? allowed.includes(campaignType as CampaignType) : false;
+export function isAllowedCampaignType(campaignType: string): boolean {
+  return ALLOWED_CAMPAIGN_TYPES.includes(campaignType as CampaignType);
 }

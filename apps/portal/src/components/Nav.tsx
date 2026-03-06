@@ -4,6 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import UserMenu from "./UserMenu";
 import { MockRoleToggle } from "./MockRoleProvider";
+import { useMockRole } from "./MockRoleProvider";
+import BrandSwitcher from "./BrandSwitcher";
+import { useBrand } from "@/lib/useBrand";
 import type { Role } from "@prisma/client";
 
 interface NavUser {
@@ -32,6 +35,11 @@ const SECONDARY_LINKS = [
 
 export default function Nav({ user }: { user: NavUser | null }) {
   const pathname = usePathname();
+  const { role } = useMockRole();
+  const { brand } = useBrand();
+  const isDev = process.env.NODE_ENV === "development";
+  const isAdmin = user?.role === "admin" || role === "admin";
+  const showBrandSwitcher = isAdmin || isDev;
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(href + "/");
@@ -45,7 +53,7 @@ export default function Nav({ user }: { user: NavUser | null }) {
           href="/home"
           className="font-bold text-base text-gray-900 pr-6 py-4 border-r border-gray-100 mr-4"
         >
-          Marketing Ops
+          {brand?.displayName ?? "Marketing Ops"}
         </Link>
 
         {/* Primary nav */}
@@ -83,11 +91,25 @@ export default function Nav({ user }: { user: NavUser | null }) {
               {label}
             </Link>
           ))}
+          {/* Brand Settings — admin only */}
+          {isAdmin && (
+            <Link
+              href="/settings/brand"
+              className={`px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
+                isActive("/settings/brand")
+                  ? "bg-gray-100 text-gray-900 font-medium"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+              }`}
+            >
+              Brand Settings
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* Right: role toggle + user */}
+      {/* Right: brand switcher + role toggle + user */}
       <div className="flex items-center gap-3">
+        {showBrandSwitcher && <BrandSwitcher />}
         <MockRoleToggle />
         {user && <UserMenu user={user} />}
       </div>
